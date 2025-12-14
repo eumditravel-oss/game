@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Ice Cube Crash ❄️ Random Draw</title>
+  <meta name="description" content="선택지 이름을 넣고, 얼음 큐브가 깨지며 랜덤으로 1개가 공개되는 추첨 게임" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="header">
+      <div class="titleRow">
+        <h1 class="title">Ice Cube Crash <span aria-hidden="true">❄️</span></h1>
+        <button id="soundBtn" class="ghostBtn" type="button" aria-pressed="true" title="효과음 On/Off">
+          🔊 Sound
+        </button>
+      </div>
+      <p class="sub">선택지를 넣고 START를 누르면, <b>하나의 큐브만</b> 💥 깨지며 결과가 공개됩니다.</p>
+    </header>
+
+    <section class="panel">
+      <div class="controls">
+        <label class="field">
+          <span class="label">선택지 개수</span>
+          <input id="countInput" type="number" min="2" max="12" value="6" inputmode="numeric" />
+        </label>
+
+        <div class="btnRow">
+          <button id="applyBtn" class="btn" type="button">개수 적용</button>
+          <button id="startBtn" class="btn primary" type="button">START</button>
+          <button id="resetBtn" class="btn" type="button">초기화</button>
+        </div>
+      </div>
+
+      <div class="names">
+        <div class="namesHeader">
+          <div class="namesTitle">선택지 이름</div>
+          <div class="hint">최대 12개 / 빈 칸은 자동으로 “선택지 n”으로 채워져요</div>
+        </div>
+        <div id="nameInputs" class="nameInputs"></div>
+      </div>
+    </section>
+
+    <section class="stage">
+      <div class="stageTop">
+        <div class="badge">Random Draw</div>
+        <div id="statusText" class="status">대기 중…</div>
+      </div>
+
+      <div id="grid" class="grid" aria-live="polite"></div>
+
+      <div class="resultBox" id="resultBox" hidden>
+        <div class="resultLabel">RESULT</div>
+        <div id="resultText" class="resultText">-</div>
+        <div class="resultSub" id="resultSub">다시 뽑으려면 START</div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footNote">Made for GitHub Pages · HTML/CSS/JS only</div>
+    </footer>
+  </div>
+
+  <!-- 효과음 (모바일 자동재생 제한 때문에, START 클릭 시 WebAudio로 생성합니다) -->
+  <script src="script.js"></script>
+</body>
+</html>

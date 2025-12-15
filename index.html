@@ -1,36 +1,61 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>🐧 Ice Cube Draw</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-<section id="setup">
-  <h1>🐧 Ice Cube Draw</h1>
-  <p>얼음이 3번 깨지면 바로 당첨!</p>
+  <main class="wrap">
 
-  <input id="count" type="number" min="2" max="12" value="6">
-  <div id="names"></div>
+    <!-- SETUP -->
+    <section id="setup" class="card">
+      <h1 class="h1">🐧 Ice Cube Draw</h1>
+      <p class="sub">얼음이 <b>3단계</b> 누적되면 바로 당첨! (가끔 2연속으로 깨짐)</p>
 
-  <button id="start">START</button>
-</section>
+      <div class="row">
+        <label class="label">
+          선택지 개수
+          <input id="count" class="input" type="number" min="2" max="12" value="6" />
+        </label>
 
-<section id="game" hidden>
-  <div id="grid"></div>
+        <button id="apply" class="btn">개수 적용</button>
+        <button id="start" class="btn primary">START</button>
+      </div>
 
-  <!-- Penguin -->
-  <div id="penguin">🐧</div>
+      <div class="namesBox">
+        <div class="namesHeader">
+          <div class="namesTitle">선택지 이름</div>
+          <div class="namesHint">빈칸은 자동으로 “선택지 n”</div>
+        </div>
+        <div id="names" class="namesGrid"></div>
+      </div>
+    </section>
 
-  <!-- Result -->
-  <div id="result" hidden>
-    <h2 id="winner"></h2>
-    <button onclick="location.reload()">다시 하기</button>
-  </div>
-</section>
+    <!-- GAME -->
+    <section id="game" class="game" hidden>
+      <div class="topBar">
+        <button id="back" class="btn small">← 설정</button>
+        <div id="status" class="status">대기 중…</div>
+        <button id="restart" class="btn small primary">다시</button>
+      </div>
 
-<script src="script.js"></script>
+      <div class="stage">
+        <div id="grid" class="grid" aria-live="polite"></div>
+        <div id="penguin" class="penguin" aria-hidden="true">🐧</div>
+
+        <div id="result" class="result" hidden>
+          <div class="resultLabel">RESULT</div>
+          <div id="winner" class="winner">-</div>
+          <button id="again" class="btn primary">다시 뽑기</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>

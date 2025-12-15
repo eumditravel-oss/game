@@ -321,3 +321,5 @@ body{
   .btn{ flex: 1; }
 }
  
+/* hidden 속성은 무조건 숨김 (RESULT가 먼저 뜨는 문제 해결) */
+[hidden]{ display:none !important; }

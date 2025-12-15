@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>🐧 Ice Cube Draw</title>
-  <link rel="stylesheet" href="style.css?v=final1" />
+  <link rel="stylesheet" href="style.css?v=final2" />
 </head>
 <body>
   <main class="wrap">
@@ -12,13 +12,14 @@
     <!-- SETUP -->
     <section id="setup" class="card">
       <h1 class="h1">🐧 Ice Cube Draw</h1>
-      <p class="sub">얼음이 <b>3단계</b> 깨지면 당첨! (중반부터 복불복 가속)</p>
+      <p class="sub">얼음이 <b>3단계</b> 누적되면 당첨! (중반부터 2연속 파손도 발생)</p>
 
       <div class="row">
         <label class="label">
           선택지 개수
           <input id="count" class="input" type="number" min="2" max="12" value="6" />
         </label>
+
         <button id="apply" class="btn">개수 적용</button>
         <button id="start" class="btn primary">START</button>
       </div>
@@ -26,7 +27,7 @@
       <div class="namesBox">
         <div class="namesHeader">
           <div class="namesTitle">선택지 이름</div>
-          <div class="namesHint">비우면 자동 입력</div>
+          <div class="namesHint">빈칸은 자동으로 “선택지 n”</div>
         </div>
         <div id="names" class="namesGrid"></div>
       </div>
@@ -42,7 +43,12 @@
 
       <div class="stage">
         <div id="grid" class="grid"></div>
-        <div id="penguin" class="penguin">🐧</div>
+
+        <!-- Penguin -->
+        <div id="penguin" class="penguin" aria-hidden="true">
+          <div class="p-body">🐧</div>
+          <div class="p-hammer">🔨</div>
+        </div>
 
         <!-- RESULT -->
         <div id="result" class="result" hidden>
@@ -60,6 +66,6 @@
 
   </main>
 
-  <script src="script.js?v=final1"></script>
+  <script src="script.js?v=final2"></script>
 </body>
 </html>

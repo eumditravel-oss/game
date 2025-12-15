@@ -1,70 +1,28 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Ice Cube Penguin Draw</title>
-  <meta name="description" content="펭귄이 얼음을 깨서 랜덤 선택지를 뽑는 게임" />
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ice Cube Roulette</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app">
+<section id="setup">
+  <h1>🐧 Ice Cube Draw</h1>
+  <input id="count" type="number" min="2" max="12" value="6">
+  <div id="names"></div>
+  <button id="start">START</button>
+</section>
 
-    <!-- SETUP -->
-    <section id="setupView" class="view setupView">
-      <h1 class="title">🐧 Ice Cube Draw</h1>
-      <p class="sub">선택지를 입력하면 펭귄이 얼음을 깨서 하나를 고릅니다</p>
-
-      <div class="panel">
-        <div class="controls">
-          <label>
-            선택지 개수
-            <input id="countInput" type="number" min="2" max="12" value="6" />
-          </label>
-
-          <div class="btnRow">
-            <button id="applyBtn">개수 적용</button>
-            <button id="startBtn" class="primary">START</button>
-          </div>
-        </div>
-
-        <div id="nameInputs" class="nameInputs"></div>
-      </div>
-    </section>
-
-    <!-- GAME -->
-    <section id="gameView" class="view gameView" hidden>
-      <div class="topBar">
-        <button id="backBtn">← 설정</button>
-        <div id="status">대기중…</div>
-      </div>
-
-      <div class="stage">
-        <div id="grid" class="grid"></div>
-
-        <!-- Penguin -->
-        <div id="penguin" class="penguin">
-          <div class="p-body"></div>
-          <div class="p-belly"></div>
-          <div class="p-eye left"></div>
-          <div class="p-eye right"></div>
-          <div class="p-beak"></div>
-          <div class="p-hammer">
-            <div class="h-stick"></div>
-            <div class="h-head"></div>
-          </div>
-        </div>
-
-        <!-- Result -->
-        <div id="resultBox" class="result" hidden>
-          <div class="label">RESULT</div>
-          <div id="resultText" class="text">-</div>
-          <button id="againBtn" class="primary">다시 뽑기</button>
-        </div>
-      </div>
-    </section>
+<section id="game" hidden>
+  <div id="grid"></div>
+  <div id="penguin"></div>
+  <div id="result" hidden>
+    <h2 id="winner"></h2>
+    <button onclick="location.reload()">다시</button>
   </div>
+</section>
 
-  <script src="script.js"></script>
+<script src="script.js"></script>
 </body>
 </html>

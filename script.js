@@ -23,18 +23,23 @@ let state = {
   running: false,
   turn: 0,
 
-  // 템포(원하면 숫자만 조절)
+  // 템포(원하면 조절)
   minWinTurn: 12,
   baseDelay: 980,
   dangerDelay: 1500,
 
-  // 펭귄 tween
+  // penguin tween
   raf: null,
   px: -9999, py: -9999,
   tx: -9999, ty: -9999,
+
+  // ✅ 도착 동기화용
+  arriveResolve: null,
+  arriveThreshold: 1.2, // px (도착 판정)
 };
 
-function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+const sleep = (ms) => new Promise(res => setTimeout(res, ms));
 
 function buildNameInputs(){
   const n = clamp(parseInt(el.count.value || "6", 10), 2, 12);
@@ -140,20 +145,27 @@ function startRound(){
   el.result.hidden = true;
   el.status.textContent = "펭귄이 얼음을 살펴보는 중… 🐧";
 
-  setTimeout(loop, 850);
+  // ✅ 동기화 루프 시작
+  runLoop();
 }
 
 function stopGame(){
   state.running = false;
   if(state.raf) cancelAnimationFrame(state.raf);
   state.raf = null;
+
+  // 혹시 기다리던 Promise가 있으면 풀어버림(정지 시 멈춤)
+  if(state.arriveResolve){
+    state.arriveResolve();
+    state.arriveResolve = null;
+  }
 }
 
 /* Penguin tween (translate3d 전용) */
-function setPenguinXY(x,y, snap=false){
+function setPenguinXY(x, y, snap=false){
   state.tx = x; state.ty = y;
 
-  // ✅ iOS에서 가끔 숨는 문제 방지
+  // iOS에서 가끔 숨는 문제 방지
   el.penguin.style.visibility = "visible";
   el.penguin.style.opacity = "1";
   el.penguin.style.display = "block";
@@ -166,23 +178,33 @@ function setPenguinXY(x,y, snap=false){
 }
 
 function tweenPenguin(){
-  const ease = 0.17;
+  const ease = 0.18;
   const step = () => {
     const dx = state.tx - state.px;
     const dy = state.ty - state.py;
+
     state.px += dx * ease;
     state.py += dy * ease;
 
     el.penguin.style.transform = `translate3d(${state.px}px, ${state.py}px, 0)`;
 
-    if(Math.abs(dx) < 0.6 && Math.abs(dy) < 0.6){
+    // ✅ 도착 판정: 도착하면 기다리던 동기화 풀기
+    if(Math.abs(dx) < state.arriveThreshold && Math.abs(dy) < state.arriveThreshold){
       state.px = state.tx; state.py = state.ty;
       el.penguin.style.transform = `translate3d(${state.px}px, ${state.py}px, 0)`;
+
+      if(state.arriveResolve){
+        const r = state.arriveResolve;
+        state.arriveResolve = null;
+        r();
+      }
       state.raf = null;
       return;
     }
+
     state.raf = requestAnimationFrame(step);
   };
+
   state.raf = requestAnimationFrame(step);
 }
 
@@ -195,11 +217,23 @@ function smashPenguin(){
 
 function movePenguinToCube(idx){
   const cube = state.cubes[idx];
-  if(!cube) return;
+  if(!cube) return Promise.resolve();
+
   const r = cube.getBoundingClientRect();
   const x = r.left + r.width/2 - 18;
   const y = r.top - 58;
-  setPenguinXY(x,y);
+
+  setPenguinXY(x, y);
+
+  // ✅ “도착할 때까지 기다렸다가 다음 액션”
+  return new Promise((resolve) => {
+    // 기존 대기중인 resolve가 있으면 먼저 풀어버려서 꼬임 방지
+    if(state.arriveResolve){
+      state.arriveResolve();
+      state.arriveResolve = null;
+    }
+    state.arriveResolve = resolve;
+  });
 }
 
 function updateGauge(idx){
@@ -219,58 +253,63 @@ function updateCrackClass(idx){
   if(h >= 3) cube.classList.add("crack3");
 }
 
-function loop(){
-  if(!state.running) return;
+/* ✅ 펭귄-크랙 동기화 루프 */
+async function runLoop(){
+  // 첫 템포 살짝 여유
+  await sleep(850);
 
-  state.turn++;
-  const idx = Math.floor(Math.random() * state.cubes.length);
+  while(state.running){
+    state.turn++;
 
-  // 복불복: 중반부터 2연속 파손 확률 증가
-  let hit = 1;
-  if (state.turn <= 4) hit = 1;
-  else if (state.turn <= 10) hit = (Math.random() < 0.12 ? 2 : 1);
-  else hit = (Math.random() < 0.35 ? 2 : 1);
+    const idx = Math.floor(Math.random() * state.cubes.length);
 
-  state.hp[idx] += hit;
+    // 복불복(중반부터 2연속 증가)
+    let hit = 1;
+    if (state.turn <= 4) hit = 1;
+    else if (state.turn <= 10) hit = (Math.random() < 0.12 ? 2 : 1);
+    else hit = (Math.random() < 0.35 ? 2 : 1);
 
-  // 최소 턴 전에는 3 도달 금지(너무 빨리 끝나는 문제 방지)
-  if (state.turn < state.minWinTurn) {
-    state.hp[idx] = Math.min(state.hp[idx], 2);
-  }
+    state.hp[idx] += hit;
 
-  movePenguinToCube(idx);
-  smashPenguin();
+    // 너무 빨리 끝나는 걸 방지: 최소 턴 전엔 3 도달 금지
+    if (state.turn < state.minWinTurn) {
+      state.hp[idx] = Math.min(state.hp[idx], 2);
+    }
 
-  updateGauge(idx);
-  updateCrackClass(idx);
+    // 상태 메시지(이건 이동 중에도 보여도 OK)
+    const previewH = clamp(state.hp[idx], 0, 3);
+    if(previewH === 2) el.status.textContent = "위험! 한 번만 더 깨지면 당첨… 😨";
+    else el.status.textContent = "펭귄이 얼음을 고르고 있어요… ❄️";
 
-  const h = state.hp[idx];
-  let nextDelay = state.baseDelay;
+    // ✅ 1) 펭귄이 타일에 도착할 때까지 기다림
+    await movePenguinToCube(idx);
+    if(!state.running) break;
 
-  if(h === 2){
-    el.status.textContent = "위험! 한 번만 더 깨지면 당첨… 😨";
-    nextDelay = state.dangerDelay;
-  } else {
-    el.status.textContent = "펭귄이 얼음을 콕콕… ❄️";
-  }
+    // ✅ 2) 도착 직후 ‘같은 타이밍’으로 망치 + 크랙/게이지 갱신
+    smashPenguin();
+    updateGauge(idx);
+    updateCrackClass(idx);
 
-  if(h >= 3){
-    state.running = false;
-    el.status.textContent = "쨍—! 💥 당첨!";
+    const h = clamp(state.hp[idx], 0, 3);
 
-    setTimeout(() => {
+    // ✅ 3) 당첨 처리 (크랙3가 보인 직후 결과창)
+    if(h >= 3){
+      state.running = false;
+      el.status.textContent = "쨍—! 💥 당첨!";
+      await sleep(650);
       el.winner.textContent = state.names[idx];
       el.result.hidden = false;
-    }, 650);
-    return;
-  }
+      break;
+    }
 
-  setTimeout(loop, nextDelay);
+    // ✅ 템포(위험이면 더 오래 멈춰서 긴박감)
+    const nextDelay = (h === 2) ? state.dangerDelay : state.baseDelay;
+    await sleep(nextDelay);
+  }
 }
 
-/* 화면 회전/리사이즈 시도 안전 */
+/* 화면 회전/리사이즈 */
 window.addEventListener("resize", () => {
   if(el.game.hidden) return;
-  // 현재 위치로 스냅해서 iOS fixed/viewport 변동 대응
   setPenguinXY(state.px, state.py, true);
 });

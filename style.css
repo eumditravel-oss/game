@@ -166,7 +166,7 @@ body{
   overflow: hidden;
 }
 
-/* ✅ 게임 그리드: 자동 반응형 (겹침 방지) */
+/* ✅ 자동 반응형: 어떤 화면에서도 겹침 방지 */
 .grid{
   max-width: 980px;
   margin: 0 auto;
@@ -175,13 +175,12 @@ body{
   gap: 12px;
   padding: 16px 14px 140px; /* result/버튼 안전영역 */
   align-content: start;
-
-  /* 핵심: 자동 열 수 조절 */
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
 }
 
 /* cubes */
 .cube{
+  position: relative;
   border-radius: 16px;
   aspect-ratio: 1 / 1;
   display:flex;
@@ -212,6 +211,7 @@ body{
     inset 0 1px 0 rgba(255,255,255,.16);
 }
 
+/* 단계별 효과를 “극명하게” */
 .cube::after{
   content:"";
   position:absolute;
@@ -221,7 +221,6 @@ body{
   opacity:0;
 }
 
-/* 3단계가 “극명하게” 보이도록 완전 다른 톤 */
 .cube.crack1{
   filter: saturate(1.05);
 }
@@ -232,6 +231,7 @@ body{
     radial-gradient(140px 120px at 60% 60%, rgba(255,255,255,.10), transparent 60%);
   mix-blend-mode: screen;
 }
+
 .cube.crack2{
   border-color: rgba(255, 220, 170, .55);
   box-shadow:
@@ -248,6 +248,7 @@ body{
     radial-gradient(140px 120px at 58% 58%, rgba(255,255,255,.14), transparent 60%);
   mix-blend-mode: screen;
 }
+
 .cube.crack3{
   border-color: rgba(255, 170, 170, .70);
   box-shadow:
@@ -306,7 +307,7 @@ body{
 }
 .result .btn{ margin-top: 14px; }
 
-/* ✅ 모바일에서 입력칸이 안 보이는 문제 해결: 2열/1열로 자동 */
+/* 모바일 입력칸 안정화 */
 @media (max-width: 720px){
   .namesGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

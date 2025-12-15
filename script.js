@@ -20,9 +20,10 @@ let state = {
   cubes: [],
   hp: [],
   running: false,
-
-  // ✅ 버그 방지용 턴 카운터(보너스 로직에 필요)
   turn: 0,
+
+  // ✅ 너무 빨리 끝나는 걸 방지하는 최소 턴 (원하면 숫자만 조절)
+  minWinTurn: 10,
 
   // penguin tween
   raf: null,
@@ -67,6 +68,11 @@ el.again.addEventListener("click", () => {
   startRound();
 });
 
+// ✅ 모바일 캐시/렌더 타이밍에서도 결과창이 먼저 안 뜨게 안전장치
+document.addEventListener("DOMContentLoaded", () => {
+  el.result.hidden = true;
+});
+
 function startFromSetup(){
   const raw = [...el.names.querySelectorAll("input")].map(i => i.value.trim());
   state.names = raw.map((v, idx) => v.length ? v : `선택지 ${idx+1}`);
@@ -105,15 +111,13 @@ function startRound(){
   buildCubes();
   resetVisual();
 
-  // ✅ 시작 즉시 결과창 방지 & 보너스 로직 기반
   state.turn = 0;
   state.running = true;
 
   el.result.hidden = true;
   el.status.textContent = "펭귄이 후보를 살펴보는 중… 🐧";
 
-  // ✅ 바로 loop 실행하지 말고 짧게 텀(시각적으로도 안정)
-  setTimeout(loop, 600);
+  setTimeout(loop, 700); // ✅ 첫 템포 조금 더 여유
 }
 
 function stopGame(){
@@ -161,7 +165,7 @@ function movePenguinToCube(idx){
   setPenguinXY(x,y);
 }
 
-// ---------- Game loop (복불복 누적 3단계 + 보너스) ----------
+// ---------- Game loop ----------
 function loop(){
   if(!state.running) return;
 
@@ -169,14 +173,21 @@ function loop(){
 
   const idx = Math.floor(Math.random() * state.cubes.length);
 
-  // ✅ 보너스: 초반(1~2턴)은 무조건 1만 깸 → 연출 안정 + 긴장감 빌드업
-  // 이후부터 35% 확률로 2연속(=2 데미지) 가능
-  const hit = state.turn < 3 ? 1 : (Math.random() < 0.35 ? 2 : 1);
+  // ✅ 보너스 + 템포 조절:
+  // - 1~3턴: 무조건 1
+  // - 4~8턴: 거의 1 (10%만 2)
+  // - 9턴 이후: 35%로 2 (복불복 본격)
+  let hit = 1;
+  if (state.turn <= 3) hit = 1;
+  else if (state.turn <= 8) hit = (Math.random() < 0.10 ? 2 : 1);
+  else hit = (Math.random() < 0.35 ? 2 : 1);
 
   state.hp[idx] += hit;
 
-  // ✅ 초반 보호: turn<3에서는 절대 3에 도달하지 못하게 (혹시 모를 예외 방지)
-  if (state.turn < 3) state.hp[idx] = Math.min(state.hp[idx], 2);
+  // ✅ 너무 빨리 끝나는 걸 확실히 막기: 최소 턴 전엔 3 도달 금지
+  if (state.turn < state.minWinTurn) {
+    state.hp[idx] = Math.min(state.hp[idx], 2);
+  }
 
   // 타겟 표시
   state.cubes.forEach(c => c.classList.remove("target"));
@@ -189,23 +200,29 @@ function loop(){
   // 시각 갱신
   updateCubeVisual(idx);
 
-  // 상태 메시지(긴장감)
-  if (state.hp[idx] === 2) el.status.textContent = "위험! 한 번만 더 깨지면 당첨… 😨";
-  else el.status.textContent = "펭귄이 얼음을 시험 중… ❄️";
+  // 긴장감 메시지 + hp=2면 잠깐 더 멈춤
+  let nextDelay = 900; // ✅ 기본 템포(느리게)
+  if (state.hp[idx] === 2) {
+    el.status.textContent = "위험! 한 번만 더 깨지면 당첨… 😨";
+    nextDelay = 1400; // ✅ 위험 상태일 때 더 길게 멈춤
+  } else {
+    el.status.textContent = "펭귄이 얼음을 시험 중… ❄️";
+  }
 
-  // 당첨 처리
+  // 당첨 처리 (minWinTurn 이후부터만 가능)
   if(state.hp[idx] >= 3){
     state.running = false;
     el.status.textContent = "쨍—! 💥 당첨!";
     cube.classList.add("crack3");
+
     setTimeout(() => {
       el.winner.textContent = cube.textContent;
       el.result.hidden = false;
-    }, 550);
+    }, 650);
     return;
   }
 
-  setTimeout(loop, 780);
+  setTimeout(loop, nextDelay);
 }
 
 function updateCubeVisual(idx){
@@ -225,7 +242,3 @@ window.addEventListener("resize", () => {
     movePenguinToCube(idx);
   }
 });
- document.addEventListener("DOMContentLoaded", () => {
-  el.result.hidden = true;
-});
-

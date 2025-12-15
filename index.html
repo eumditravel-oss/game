@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>🐧 Ice Cube Draw</title>
-  <link rel="stylesheet" href="style.css?v=final2" />
+  <link rel="stylesheet" href="style.css?v=final3" />
 </head>
 <body>
   <main class="wrap">
@@ -44,7 +44,7 @@
       <div class="stage">
         <div id="grid" class="grid"></div>
 
-        <!-- Penguin -->
+        <!-- Penguin (아이콘+망치) -->
         <div id="penguin" class="penguin" aria-hidden="true">
           <div class="p-body">🐧</div>
           <div class="p-hammer">🔨</div>
@@ -52,13 +52,14 @@
 
         <!-- RESULT -->
         <div id="result" class="result" hidden>
-          <div class="resultCard">
+          <div class="resultCard" role="dialog" aria-modal="true">
             <div class="resultLabel">RESULT</div>
             <div id="winner" class="winner">-</div>
             <div class="resultBtns">
               <button id="again" class="btn primary">다시 뽑기</button>
               <button id="toSetup" class="btn">처음부터</button>
             </div>
+            <div class="resultHint">처음부터를 누르면 선택지 입력 화면으로 돌아가요.</div>
           </div>
         </div>
       </div>
@@ -66,6 +67,6 @@
 
   </main>
 
-  <script src="script.js?v=final2"></script>
+  <script src="script.js?v=final3"></script>
 </body>
 </html>

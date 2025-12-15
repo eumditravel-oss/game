@@ -3,64 +3,47 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Ice Cube Crash ❄️ Random Draw</title>
-  <meta name="description" content="선택지 이름을 넣고, 펭귄이 얼음을 깨며 랜덤으로 1개가 공개되는 추첨 게임" />
+  <title>Ice Cube Penguin Draw</title>
+  <meta name="description" content="펭귄이 얼음을 깨서 랜덤 선택지를 뽑는 게임" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
 
-    <!-- ========== SETUP 화면 ========== -->
+    <!-- SETUP -->
     <section id="setupView" class="view setupView">
-      <header class="header">
-        <div class="titleRow">
-          <h1 class="title">Ice Cube Crash <span aria-hidden="true">❄️</span></h1>
-          <button id="soundBtn" class="ghostBtn" type="button" aria-pressed="true" title="효과음 On/Off">
-            🔊 Sound
-          </button>
-        </div>
-        <p class="sub">선택지를 넣고 START를 누르면, <b>펭귄이</b> 🐧 얼음을 깨서 결과를 공개합니다.</p>
-      </header>
+      <h1 class="title">🐧 Ice Cube Draw</h1>
+      <p class="sub">선택지를 입력하면 펭귄이 얼음을 깨서 하나를 고릅니다</p>
 
-      <section class="panel">
+      <div class="panel">
         <div class="controls">
-          <label class="field">
-            <span class="label">선택지 개수</span>
-            <input id="countInput" type="number" min="2" max="12" value="6" inputmode="numeric" />
+          <label>
+            선택지 개수
+            <input id="countInput" type="number" min="2" max="12" value="6" />
           </label>
 
           <div class="btnRow">
-            <button id="applyBtn" class="btn" type="button">개수 적용</button>
-            <button id="startBtn" class="btn primary" type="button">START</button>
-            <button id="resetBtn" class="btn" type="button">초기화</button>
+            <button id="applyBtn">개수 적용</button>
+            <button id="startBtn" class="primary">START</button>
           </div>
         </div>
 
-        <div class="names">
-          <div class="namesHeader">
-            <div class="namesTitle">선택지 이름</div>
-            <div class="hint">최대 12개 / 빈 칸은 “선택지 n”으로 자동 채움</div>
-          </div>
-          <div id="nameInputs" class="nameInputs"></div>
-        </div>
-      </section>
-
-      <footer class="footer">
-        <div class="footNote">Made for GitHub Pages · HTML/CSS/JS only</div>
-      </footer>
+        <div id="nameInputs" class="nameInputs"></div>
+      </div>
     </section>
 
-    <!-- ========== GAME 화면(한 화면 고정) ========== -->
+    <!-- GAME -->
     <section id="gameView" class="view gameView" hidden>
-      <div class="gameTopBar">
-        <button id="backBtn" class="btn small" type="button">← 설정으로</button>
-        <div class="gameBadge">Random Draw</div>
-        <div id="statusText" class="status">대기 중…</div>
+      <div class="topBar">
+        <button id="backBtn">← 설정</button>
+        <div id="status">대기중…</div>
       </div>
 
-      <div id="stage" class="stageFull">
-        <!-- 펭귄(연출 캐릭터) -->
-        <div id="penguin" class="penguin" aria-hidden="true">
+      <div class="stage">
+        <div id="grid" class="grid"></div>
+
+        <!-- Penguin -->
+        <div id="penguin" class="penguin">
           <div class="p-body"></div>
           <div class="p-belly"></div>
           <div class="p-eye left"></div>
@@ -72,21 +55,12 @@
           </div>
         </div>
 
-        <div id="grid" class="gridFull" aria-live="polite"></div>
-
-        <div class="resultBoxFull" id="resultBox" hidden>
-          <div class="resultLabel">RESULT</div>
-          <div id="resultText" class="resultText">-</div>
-          <div class="resultSub" id="resultSub">다시 뽑으려면 START</div>
-
-          <div class="resultBtns">
-            <button id="againBtn" class="btn primary" type="button">다시 START</button>
-            <button id="editBtn" class="btn" type="button">이름 수정</button>
-          </div>
+        <!-- Result -->
+        <div id="resultBox" class="result" hidden>
+          <div class="label">RESULT</div>
+          <div id="resultText" class="text">-</div>
+          <button id="againBtn" class="primary">다시 뽑기</button>
         </div>
-
-        <!-- 게임 화면에서도 START 가능(결과 전/후) -->
-        <button id="floatingStart" class="floatingStart" type="button">START</button>
       </div>
     </section>
   </div>

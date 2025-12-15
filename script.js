@@ -225,4 +225,7 @@ window.addEventListener("resize", () => {
     movePenguinToCube(idx);
   }
 });
- 
+ document.addEventListener("DOMContentLoaded", () => {
+  el.result.hidden = true;
+});
+

@@ -1,4 +1,4 @@
-.const el = {
+const el = {
   setup: document.getElementById("setup"),
   game: document.getElementById("game"),
   count: document.getElementById("count"),

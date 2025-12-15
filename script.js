@@ -225,3 +225,4 @@ window.addEventListener("resize", () => {
     movePenguinToCube(idx);
   }
 });
+ 

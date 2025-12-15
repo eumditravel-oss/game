@@ -9,9 +9,9 @@ const result = document.getElementById("result");
 const winnerText = document.getElementById("winner");
 
 let cubes = [];
-let states = [];
+let damage = [];
 
-function buildNames(){
+function buildInputs(){
   namesEl.innerHTML="";
   for(let i=0;i<countEl.value;i++){
     const input=document.createElement("input");
@@ -19,51 +19,57 @@ function buildNames(){
     namesEl.appendChild(input);
   }
 }
-buildNames();
-countEl.onchange=buildNames;
+buildInputs();
+countEl.onchange = buildInputs;
 
-startBtn.onclick=()=>{
-  setup.hidden=true;
-  game.hidden=false;
+startBtn.onclick = ()=>{
+  setup.hidden = true;
+  game.hidden = false;
   startGame();
 };
 
 function startGame(){
-  const names=[...namesEl.children].map((i,idx)=>i.value||`선택지 ${idx+1}`);
+  const names = [...namesEl.children].map((i,idx)=>i.value||`선택지 ${idx+1}`);
   grid.innerHTML="";
   cubes=[];
-  states=Array(names.length).fill(0);
+  damage = Array(names.length).fill(0);
 
-  names.forEach((n,i)=>{
+  names.forEach(name=>{
     const c=document.createElement("div");
     c.className="cube";
-    c.textContent=n;
+    c.textContent=name;
     grid.appendChild(c);
     cubes.push(c);
   });
 
-  loop();
+  gameLoop();
 }
 
-function loop(){
-  const idx=Math.floor(Math.random()*cubes.length);
-  const dmg=Math.random()<0.35?2:1; // 🔥 복불복 핵심
-  states[idx]+=dmg;
+function gameLoop(){
+  const idx = Math.floor(Math.random()*cubes.length);
 
-  penguin.style.transform=`translate(${cubes[idx].offsetLeft}px,${cubes[idx].offsetTop}px)`;
+  // 🔥 복불복 핵심: 35% 확률로 2단계 파괴
+  const hit = Math.random() < 0.35 ? 2 : 1;
+  damage[idx] += hit;
 
+  // 펭귄 이동
+  const r = cubes[idx].getBoundingClientRect();
+  penguin.style.transform =
+    `translate(${r.left + r.width/2 - 18}px, ${r.top - 40}px)`;
+
+  // 상태 업데이트
   cubes[idx].classList.remove("crack1","crack2","crack3");
 
-  if(states[idx]>=3){
+  if(damage[idx] >= 3){
     cubes[idx].classList.add("crack3");
     setTimeout(()=>{
-      winnerText.textContent=cubes[idx].textContent;
-      result.hidden=false;
-    },500);
+      winnerText.textContent = cubes[idx].textContent;
+      result.hidden = false;
+    },600);
     return;
-  }else{
-    cubes[idx].classList.add(`crack${states[idx]}`);
   }
 
-  setTimeout(loop,700);
+  cubes[idx].classList.add(`crack${damage[idx]}`);
+
+  setTimeout(gameLoop, 800);
 }

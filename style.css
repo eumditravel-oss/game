@@ -1,13 +1,30 @@
+*{box-sizing:border-box}
 body{
   margin:0;
   background:#041018;
   color:#eaf4ff;
-  font-family:sans-serif;
+  font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;
+  text-align:center;
 }
 
-#setup,#game{
-  padding:20px;
-  text-align:center;
+#setup,#game{padding:20px}
+
+#names{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  max-width:400px;
+  margin:12px auto;
+}
+
+input{padding:6px;border-radius:6px;border:none}
+
+button{
+  padding:10px 16px;
+  border-radius:10px;
+  border:none;
+  font-weight:700;
+  cursor:pointer;
 }
 
 #grid{
@@ -15,30 +32,31 @@ body{
   grid-template-columns:repeat(3,1fr);
   gap:14px;
   max-width:900px;
-  margin:0 auto;
+  margin:40px auto;
 }
 
+/* ===== ICE CUBE ===== */
 .cube{
   aspect-ratio:1/1;
   border-radius:16px;
   background:linear-gradient(135deg,#9ad9ff,#4fb1ff);
-  position:relative;
-  transition:.3s;
   font-weight:900;
   display:flex;
   align-items:center;
   justify-content:center;
+  position:relative;
+  transition:.3s;
 }
 
 .cube.crack1{
-  background:linear-gradient(135deg,#9ad9ff,#2f88d8);
+  background:linear-gradient(135deg,#bfe9ff,#4f8cff);
 }
 .cube.crack2{
   background:linear-gradient(135deg,#ffd59a,#ff8c3a);
-  animation:shake .2s infinite;
+  animation:shake .15s infinite;
 }
 .cube.crack3{
-  background:linear-gradient(135deg,#ff8080,#ff2b2b);
+  background:linear-gradient(135deg,#ff7a7a,#ff1f1f);
   box-shadow:0 0 40px red;
 }
 
@@ -48,19 +66,21 @@ body{
   75%{transform:translate(-1px,1px)}
 }
 
+/* ===== Penguin ===== */
 #penguin{
   position:fixed;
-  width:50px;height:50px;
-  background:white;
-  border-radius:50%;
-  bottom:20px;left:20px;
+  font-size:36px;
+  left:20px;
+  bottom:20px;
   transition:transform .6s cubic-bezier(.2,.9,.2,1);
+  pointer-events:none;
 }
 
+/* ===== Result ===== */
 #result{
   position:fixed;
   inset:0;
-  background:rgba(0,0,0,.8);
+  background:rgba(0,0,0,.85);
   display:flex;
   flex-direction:column;
   align-items:center;

@@ -1,319 +1,227 @@
-:root{
-  --bg1:#06121f;
-  --bg2:#04080f;
-  --panel: rgba(255,255,255,.06);
-  --line: rgba(255,255,255,.12);
-  --text:#eaf4ff;
-  --muted:#9fb4cc;
+const el = {
+  setup: document.getElementById("setup"),
+  game: document.getElementById("game"),
+  count: document.getElementById("count"),
+  names: document.getElementById("names"),
+  apply: document.getElementById("apply"),
+  start: document.getElementById("start"),
+  back: document.getElementById("back"),
+  restart: document.getElementById("restart"),
+  grid: document.getElementById("grid"),
+  penguin: document.getElementById("penguin"),
+  status: document.getElementById("status"),
+  result: document.getElementById("result"),
+  winner: document.getElementById("winner"),
+  again: document.getElementById("again"),
+};
+
+let state = {
+  names: [],
+  cubes: [],
+  hp: [],
+  running: false,
+
+  // ✅ 버그 방지용 턴 카운터(보너스 로직에 필요)
+  turn: 0,
+
+  // penguin tween
+  raf: null,
+  px: -9999, py: -9999,
+  tx: -9999, ty: -9999,
+};
+
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+function buildNameInputs(){
+  const n = clamp(parseInt(el.count.value || "6", 10), 2, 12);
+  el.count.value = String(n);
+  el.names.innerHTML = "";
+  for(let i=0;i<n;i++){
+    const input = document.createElement("input");
+    input.placeholder = `선택지 ${i+1}`;
+    el.names.appendChild(input);
+  }
+}
+buildNameInputs();
+
+el.apply.addEventListener("click", buildNameInputs);
+el.count.addEventListener("change", buildNameInputs);
+
+el.start.addEventListener("click", () => startFromSetup());
+
+el.back.addEventListener("click", () => {
+  stopGame();
+  el.game.hidden = true;
+  el.setup.hidden = false;
+  document.body.style.overflow = "";
+});
+
+el.restart.addEventListener("click", () => {
+  if(state.running) return;
+  startRound();
+});
+
+el.again.addEventListener("click", () => {
+  el.result.hidden = true;
+  if(state.running) return;
+  startRound();
+});
+
+function startFromSetup(){
+  const raw = [...el.names.querySelectorAll("input")].map(i => i.value.trim());
+  state.names = raw.map((v, idx) => v.length ? v : `선택지 ${idx+1}`);
+
+  el.setup.hidden = true;
+  el.game.hidden = false;
+  document.body.style.overflow = "hidden";
+
+  startRound();
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  color:var(--text);
-  font-family: system-ui,-apple-system,"Noto Sans KR",sans-serif;
-  background:
-    radial-gradient(900px 540px at 15% 10%, rgba(90,190,255,.16), transparent 60%),
-    radial-gradient(800px 600px at 85% 25%, rgba(160,255,220,.10), transparent 60%),
-    linear-gradient(180deg, var(--bg1), var(--bg2));
+function buildCubes(){
+  el.grid.innerHTML = "";
+  state.cubes = [];
+  state.hp = new Array(state.names.length).fill(0);
+
+  state.names.forEach((name, idx) => {
+    const c = document.createElement("div");
+    c.className = "cube";
+    c.textContent = name;
+    c.dataset.index = String(idx);
+    el.grid.appendChild(c);
+    state.cubes.push(c);
+  });
 }
 
-.wrap{
-  min-height:100%;
-  padding: 16px;
+function resetVisual(){
+  state.cubes.forEach(c => c.classList.remove("target","crack1","crack2","crack3"));
+  el.result.hidden = true;
+  el.winner.textContent = "-";
+  el.status.textContent = "대기 중…";
+  setPenguinXY(12, window.innerHeight - 90, true);
 }
 
-/* SETUP card */
-.card{
-  max-width: 860px;
-  margin: 0 auto;
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(0,0,0,.35);
+function startRound(){
+  buildCubes();
+  resetVisual();
+
+  // ✅ 시작 즉시 결과창 방지 & 보너스 로직 기반
+  state.turn = 0;
+  state.running = true;
+
+  el.result.hidden = true;
+  el.status.textContent = "펭귄이 후보를 살펴보는 중… 🐧";
+
+  // ✅ 바로 loop 실행하지 말고 짧게 텀(시각적으로도 안정)
+  setTimeout(loop, 600);
 }
 
-.h1{
-  margin: 4px 0 8px;
-  font-size: clamp(20px, 4.6vw, 30px);
-}
-.sub{
-  margin: 0 0 14px;
-  color: var(--muted);
-  line-height:1.45;
+function stopGame(){
+  state.running = false;
+  if(state.raf) cancelAnimationFrame(state.raf);
+  state.raf = null;
 }
 
-.row{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: end;
+// ---------- Penguin smooth move ----------
+function setPenguinXY(x,y, snap=false){
+  state.tx = x; state.ty = y;
+  if(snap){
+    state.px = x; state.py = y;
+    el.penguin.style.transform = `translate(${x}px, ${y}px)`;
+  }
+  if(!state.raf) tweenPenguin();
 }
 
-.label{
-  display:flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 160px;
-  color: var(--muted);
-  font-size: 13px;
+function tweenPenguin(){
+  const ease = 0.14;
+  const step = () => {
+    const dx = state.tx - state.px;
+    const dy = state.ty - state.py;
+    state.px += dx * ease;
+    state.py += dy * ease;
+    el.penguin.style.transform = `translate(${state.px}px, ${state.py}px)`;
+
+    if(Math.abs(dx) < 0.6 && Math.abs(dy) < 0.6){
+      state.px = state.tx; state.py = state.ty;
+      el.penguin.style.transform = `translate(${state.px}px, ${state.py}px)`;
+      state.raf = null;
+      return;
+    }
+    state.raf = requestAnimationFrame(step);
+  };
+  state.raf = requestAnimationFrame(step);
 }
 
-.input{
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline: none;
-}
-.input:focus{
-  border-color: rgba(170,235,255,.45);
-  box-shadow: 0 0 0 4px rgba(120,220,255,.12);
+function movePenguinToCube(idx){
+  const cube = state.cubes[idx];
+  if(!cube) return;
+  const r = cube.getBoundingClientRect();
+  const x = r.left + r.width/2 - 18;
+  const y = r.top - 46;
+  setPenguinXY(x,y);
 }
 
-.btn{
-  height: 42px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: rgba(255,255,255,.06);
-  color: var(--text);
-  cursor:pointer;
-}
-.btn.primary{
-  border-color: rgba(150,235,255,.40);
-  background: linear-gradient(180deg, rgba(120,220,255,.35), rgba(120,220,255,.14));
-  font-weight: 800;
-}
-.btn.small{
-  height: 36px;
-  border-radius: 999px;
-  font-size: 13px;
-  padding: 0 12px;
+// ---------- Game loop (복불복 누적 3단계 + 보너스) ----------
+function loop(){
+  if(!state.running) return;
+
+  state.turn++;
+
+  const idx = Math.floor(Math.random() * state.cubes.length);
+
+  // ✅ 보너스: 초반(1~2턴)은 무조건 1만 깸 → 연출 안정 + 긴장감 빌드업
+  // 이후부터 35% 확률로 2연속(=2 데미지) 가능
+  const hit = state.turn < 3 ? 1 : (Math.random() < 0.35 ? 2 : 1);
+
+  state.hp[idx] += hit;
+
+  // ✅ 초반 보호: turn<3에서는 절대 3에 도달하지 못하게 (혹시 모를 예외 방지)
+  if (state.turn < 3) state.hp[idx] = Math.min(state.hp[idx], 2);
+
+  // 타겟 표시
+  state.cubes.forEach(c => c.classList.remove("target"));
+  const cube = state.cubes[idx];
+  cube.classList.add("target");
+
+  // 펭귄 이동
+  movePenguinToCube(idx);
+
+  // 시각 갱신
+  updateCubeVisual(idx);
+
+  // 상태 메시지(긴장감)
+  if (state.hp[idx] === 2) el.status.textContent = "위험! 한 번만 더 깨지면 당첨… 😨";
+  else el.status.textContent = "펭귄이 얼음을 시험 중… ❄️";
+
+  // 당첨 처리
+  if(state.hp[idx] >= 3){
+    state.running = false;
+    el.status.textContent = "쨍—! 💥 당첨!";
+    cube.classList.add("crack3");
+    setTimeout(() => {
+      el.winner.textContent = cube.textContent;
+      el.result.hidden = false;
+    }, 550);
+    return;
+  }
+
+  setTimeout(loop, 780);
 }
 
-/* names */
-.namesBox{
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-.namesHeader{
-  display:flex;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: baseline;
-}
-.namesTitle{ font-weight:800; }
-.namesHint{ color: var(--muted); font-size: 12.5px; }
-
-.namesGrid{
-  margin-top: 10px;
-  display:grid;
-  gap: 10px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.namesGrid input{
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline:none;
+function updateCubeVisual(idx){
+  const cube = state.cubes[idx];
+  cube.classList.remove("crack1","crack2","crack3");
+  const h = clamp(state.hp[idx], 0, 3);
+  if(h === 1) cube.classList.add("crack1");
+  if(h === 2) cube.classList.add("crack2");
+  if(h >= 3) cube.classList.add("crack3");
 }
 
-/* GAME layout */
-.game{
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
-.topBar{
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  z-index: 40;
-  max-width: 980px;
-  margin: 0 auto;
-  display:flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 0 6px;
-}
-.status{
-  flex: 1;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.stage{
-  position: relative;
-  height: 100vh;
-  width: 100vw;
-  padding-top: 62px;
-  overflow: hidden;
-}
-
-/* ✅ 자동 반응형: 어떤 화면에서도 겹침 방지 */
-.grid{
-  max-width: 980px;
-  margin: 0 auto;
-  height: calc(100vh - 62px);
-  display: grid;
-  gap: 12px;
-  padding: 16px 14px 140px; /* result/버튼 안전영역 */
-  align-content: start;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-}
-
-/* cubes */
-.cube{
-  position: relative;
-  border-radius: 16px;
-  aspect-ratio: 1 / 1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding: 10px;
-  text-align:center;
-  font-weight: 900;
-  user-select:none;
-  border: 1px solid rgba(210, 245, 255, .22);
-
-  background:
-    radial-gradient(120px 90px at 30% 20%, rgba(255,255,255,.20), transparent 55%),
-    linear-gradient(135deg, rgba(175,232,255,.30), rgba(210,248,255,.10));
-  box-shadow:
-    0 12px 26px rgba(0,0,0,.30),
-    inset 0 1px 0 rgba(255,255,255,.14);
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
-}
-
-.cube.target{
-  transform: translateY(-3px) scale(1.03);
-  border-color: rgba(255,255,255,.50);
-  box-shadow:
-    0 20px 40px rgba(0,0,0,.48),
-    0 0 0 8px rgba(120,220,255,.12),
-    0 0 50px rgba(120,220,255,.20),
-    inset 0 1px 0 rgba(255,255,255,.16);
-}
-
-/* 단계별 효과를 “극명하게” */
-.cube::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:16px;
-  pointer-events:none;
-  opacity:0;
-}
-
-.cube.crack1{
-  filter: saturate(1.05);
-}
-.cube.crack1::after{
-  opacity:.55;
-  background:
-    linear-gradient(120deg, transparent 46%, rgba(255,255,255,.28) 47%, transparent 48%),
-    radial-gradient(140px 120px at 60% 60%, rgba(255,255,255,.10), transparent 60%);
-  mix-blend-mode: screen;
-}
-
-.cube.crack2{
-  border-color: rgba(255, 220, 170, .55);
-  box-shadow:
-    0 18px 36px rgba(0,0,0,.44),
-    0 0 0 7px rgba(255,170,80,.10),
-    inset 0 1px 0 rgba(255,255,255,.18);
-  animation: shake .16s infinite;
-}
-.cube.crack2::after{
-  opacity:.85;
-  background:
-    linear-gradient(115deg, transparent 42%, rgba(255,255,255,.34) 43%, transparent 44%),
-    linear-gradient(35deg, transparent 54%, rgba(255,255,255,.24) 55%, transparent 56%),
-    radial-gradient(140px 120px at 58% 58%, rgba(255,255,255,.14), transparent 60%);
-  mix-blend-mode: screen;
-}
-
-.cube.crack3{
-  border-color: rgba(255, 170, 170, .70);
-  box-shadow:
-    0 22px 50px rgba(0,0,0,.55),
-    0 0 70px rgba(255,70,70,.22),
-    inset 0 1px 0 rgba(255,255,255,.18);
-  filter: saturate(1.25);
-}
-.cube.crack3::after{
-  opacity: 1;
-  background:
-    radial-gradient(120px 120px at 50% 45%, rgba(255,90,90,.22), transparent 62%),
-    linear-gradient(112deg, transparent 40%, rgba(255,255,255,.42) 41%, transparent 42%),
-    linear-gradient(28deg, transparent 50%, rgba(255,255,255,.28) 51%, transparent 52%),
-    linear-gradient(150deg, transparent 58%, rgba(255,255,255,.26) 59%, transparent 60%);
-  mix-blend-mode: screen;
-}
-
-@keyframes shake{
-  0%,100%{ transform: translate(0,0) }
-  25%{ transform: translate(1px,-1px) }
-  75%{ transform: translate(-1px,1px) }
-}
-
-/* Penguin */
-.penguin{
-  position: fixed;
-  z-index: 60;
-  font-size: 38px;
-  transform: translate(-9999px, -9999px);
-  pointer-events: none;
-  filter: drop-shadow(0 10px 14px rgba(0,0,0,.38));
-}
-
-/* Result overlay */
-.result{
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.78);
-  z-index: 80;
-  display:flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.resultLabel{
-  letter-spacing: .9px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.winner{
-  margin-top: 10px;
-  font-size: clamp(22px, 6vw, 40px);
-  font-weight: 900;
-}
-.result .btn{ margin-top: 14px; }
-
-/* 모바일 입력칸 안정화 */
-@media (max-width: 720px){
-  .namesGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 420px){
-  .namesGrid{ grid-template-columns: 1fr; }
-  .row{ gap: 8px; }
-  .label{ min-width: 100%; }
-  .btn{ flex: 1; }
-}
+window.addEventListener("resize", () => {
+  if(el.game.hidden) return;
+  const target = state.cubes.find(c => c.classList.contains("target"));
+  if(target){
+    const idx = parseInt(target.dataset.index, 10);
+    movePenguinToCube(idx);
+  }
+});

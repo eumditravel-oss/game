@@ -8,7 +8,15 @@
 }
 
 *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
-html,body{ height:100%; }
+
+/* ✅ 모바일 텍스트 확대/더블탭 줌 방지 핵심 */
+html, body{
+  height:100%;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
 body{
   margin:0;
   color:var(--text);
@@ -20,6 +28,11 @@ body{
 }
 
 .wrap{ min-height:100%; padding:16px; }
+
+/* 클릭/터치 요소 확대 방지 */
+button, input, label, .cube, .btn, .namesGrid input{
+  touch-action: manipulation;
+}
 
 /* SETUP */
 .card{
@@ -34,13 +47,8 @@ body{
 .h1{ margin:4px 0 8px; font-size: clamp(20px, 4.6vw, 30px); }
 .sub{ margin:0 0 14px; color:var(--muted); line-height:1.45; }
 
-.row{
-  display:flex; gap:10px; flex-wrap:wrap; align-items:end;
-}
-.label{
-  display:flex; flex-direction:column; gap:6px;
-  min-width:160px; color:var(--muted); font-size:13px;
-}
+.row{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+.label{ display:flex; flex-direction:column; gap:6px; min-width:160px; color:var(--muted); font-size:13px; }
 .input{
   height:42px; padding:0 12px; border-radius:12px;
   border:1px solid var(--line);
@@ -127,7 +135,7 @@ body{
   padding: 10px;
   text-align:center;
   font-weight: 900;
-  user-select:none;
+  user-select:none; /* ✅ 텍스트 선택 자체도 방지 */
   border: 1px solid rgba(210,245,255,.22);
   background:
     radial-gradient(120px 90px at 30% 20%, rgba(255,255,255,.20), transparent 55%),
@@ -213,25 +221,14 @@ body{
   animation: crackFinal .55s ease-out;
 }
 
-@keyframes crackPop{
-  0%{ transform: scale(.95); filter: blur(1px); }
-  100%{ transform: scale(.98); filter: blur(0); }
-}
-@keyframes crackJitter{
-  0%,100%{ transform: translate(0,0) scale(.985); }
-  50%{ transform: translate(1px,-1px) scale(.985); }
-}
-@keyframes crackFinal{
-  0%{ transform: scale(.92); filter: blur(1.4px); }
-  60%{ transform: scale(1.01); filter: blur(0); }
-  100%{ transform: scale(.99); }
-}
+@keyframes crackPop{ 0%{ transform: scale(.95); filter: blur(1px);} 100%{ transform: scale(.98); filter: blur(0);} }
+@keyframes crackJitter{ 0%,100%{ transform: translate(0,0) scale(.985);} 50%{ transform: translate(1px,-1px) scale(.985);} }
+@keyframes crackFinal{ 0%{ transform: scale(.92); filter: blur(1.4px);} 60%{ transform: scale(1.01); filter: blur(0);} 100%{ transform: scale(.99);} }
 
-/* 펭귄 (translate3d 안정판) */
+/* 펭귄 */
 .penguin{
   position: fixed;
-  left: 0;
-  top: 0;
+  left: 0; top: 0;
   z-index: 999;
   pointer-events: none;
   display: block;

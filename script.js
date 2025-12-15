@@ -23,17 +23,14 @@ let state = {
   running: false,
   turn: 0,
 
-  // 템포
   minWinTurn: 12,
   baseDelay: 980,
   dangerDelay: 1500,
 
-  // penguin tween
   raf: null,
   px: -9999, py: -9999,
   tx: -9999, ty: -9999,
 
-  // 도착 동기화
   arriveResolve: null,
   arriveThreshold: 1.2,
 };
@@ -131,7 +128,6 @@ function resetVisual(){
   el.winner.textContent = "-";
   el.status.textContent = "대기 중…";
 
-  // iOS 안정: 시작 시 무조건 한 번 스냅
   setPenguinXY(14, window.innerHeight - 150, true);
 }
 
@@ -141,10 +137,9 @@ function startRound(){
 
   state.turn = 0;
   state.running = true;
-
   el.result.hidden = true;
-  el.status.textContent = "펭귄이 얼음을 살펴보는 중… 🐧";
 
+  el.status.textContent = "펭귄이 얼음을 살펴보는 중… 🐧";
   runLoop();
 }
 
@@ -152,14 +147,13 @@ function stopGame(){
   state.running = false;
   if(state.raf) cancelAnimationFrame(state.raf);
   state.raf = null;
-
   if(state.arriveResolve){
     state.arriveResolve();
     state.arriveResolve = null;
   }
 }
 
-/* Penguin tween */
+/* Penguin */
 function setPenguinXY(x, y, snap=false){
   state.tx = x; state.ty = y;
 
@@ -197,10 +191,8 @@ function tweenPenguin(){
       state.raf = null;
       return;
     }
-
     state.raf = requestAnimationFrame(step);
   };
-
   state.raf = requestAnimationFrame(step);
 }
 
@@ -211,14 +203,12 @@ function smashPenguin(){
   setTimeout(()=> el.penguin.classList.remove("smash"), 520);
 }
 
-/* ✅ 타일 중앙 정렬 버전 */
+/* 타일 중앙 정렬 */
 function movePenguinToCube(idx){
   const cube = state.cubes[idx];
   if(!cube) return Promise.resolve();
 
   const r = cube.getBoundingClientRect();
-
-  // 펭귄(몸+망치) 크기 대략치로 중앙 보정
   const penguinW = 48;
   const penguinH = 52;
 
@@ -258,7 +248,6 @@ async function runLoop(){
 
   while(state.running){
     state.turn++;
-
     const idx = Math.floor(Math.random() * state.cubes.length);
 
     let hit = 1;
@@ -300,7 +289,4 @@ async function runLoop(){
   }
 }
 
-window.addEventListener("resize", () => {
-  if(el.game.hidden) return;
-  setPenguinXY(state.px, state.py, true);
-});
+window.addEventLis

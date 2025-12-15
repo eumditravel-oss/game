@@ -13,6 +13,7 @@ const el = {
   result: document.getElementById("result"),
   winner: document.getElementById("winner"),
   again: document.getElementById("again"),
+  toSetup: document.getElementById("toSetup"),
 };
 
 let state = {
@@ -21,11 +22,7 @@ let state = {
   hp: [],
   running: false,
   turn: 0,
-
-  // ✅ 너무 빨리 끝나는 걸 방지하는 최소 턴 (원하면 숫자만 조절)
   minWinTurn: 10,
-
-  // penguin tween
   raf: null,
   px: -9999, py: -9999,
   tx: -9999, ty: -9999,
@@ -48,14 +45,14 @@ buildNameInputs();
 el.apply.addEventListener("click", buildNameInputs);
 el.count.addEventListener("change", buildNameInputs);
 
+document.addEventListener("DOMContentLoaded", () => {
+  el.result.hidden = true;
+});
+
 el.start.addEventListener("click", () => startFromSetup());
 
-el.back.addEventListener("click", () => {
-  stopGame();
-  el.game.hidden = true;
-  el.setup.hidden = false;
-  document.body.style.overflow = "";
-});
+el.back.addEventListener("click", () => goSetup());
+el.toSetup.addEventListener("click", () => goSetup());
 
 el.restart.addEventListener("click", () => {
   if(state.running) return;
@@ -68,10 +65,13 @@ el.again.addEventListener("click", () => {
   startRound();
 });
 
-// ✅ 모바일 캐시/렌더 타이밍에서도 결과창이 먼저 안 뜨게 안전장치
-document.addEventListener("DOMContentLoaded", () => {
+function goSetup(){
+  stopGame();
   el.result.hidden = true;
-});
+  el.game.hidden = true;
+  el.setup.hidden = false;
+  document.body.style.overflow = "";
+}
 
 function startFromSetup(){
   const raw = [...el.names.querySelectorAll("input")].map(i => i.value.trim());
@@ -117,7 +117,7 @@ function startRound(){
   el.result.hidden = true;
   el.status.textContent = "펭귄이 후보를 살펴보는 중… 🐧";
 
-  setTimeout(loop, 700); // ✅ 첫 템포 조금 더 여유
+  setTimeout(loop, 700);
 }
 
 function stopGame(){
@@ -126,7 +126,7 @@ function stopGame(){
   state.raf = null;
 }
 
-// ---------- Penguin smooth move ----------
+/* Penguin tween */
 function setPenguinXY(x,y, snap=false){
   state.tx = x; state.ty = y;
   if(snap){
@@ -165,7 +165,7 @@ function movePenguinToCube(idx){
   setPenguinXY(x,y);
 }
 
-// ---------- Game loop ----------
+/* game loop */
 function loop(){
   if(!state.running) return;
 
@@ -173,10 +173,6 @@ function loop(){
 
   const idx = Math.floor(Math.random() * state.cubes.length);
 
-  // ✅ 보너스 + 템포 조절:
-  // - 1~3턴: 무조건 1
-  // - 4~8턴: 거의 1 (10%만 2)
-  // - 9턴 이후: 35%로 2 (복불복 본격)
   let hit = 1;
   if (state.turn <= 3) hit = 1;
   else if (state.turn <= 8) hit = (Math.random() < 0.10 ? 2 : 1);
@@ -184,32 +180,25 @@ function loop(){
 
   state.hp[idx] += hit;
 
-  // ✅ 너무 빨리 끝나는 걸 확실히 막기: 최소 턴 전엔 3 도달 금지
   if (state.turn < state.minWinTurn) {
     state.hp[idx] = Math.min(state.hp[idx], 2);
   }
 
-  // 타겟 표시
   state.cubes.forEach(c => c.classList.remove("target"));
   const cube = state.cubes[idx];
   cube.classList.add("target");
 
-  // 펭귄 이동
   movePenguinToCube(idx);
-
-  // 시각 갱신
   updateCubeVisual(idx);
 
-  // 긴장감 메시지 + hp=2면 잠깐 더 멈춤
-  let nextDelay = 900; // ✅ 기본 템포(느리게)
+  let nextDelay = 900;
   if (state.hp[idx] === 2) {
     el.status.textContent = "위험! 한 번만 더 깨지면 당첨… 😨";
-    nextDelay = 1400; // ✅ 위험 상태일 때 더 길게 멈춤
+    nextDelay = 1400;
   } else {
     el.status.textContent = "펭귄이 얼음을 시험 중… ❄️";
   }
 
-  // 당첨 처리 (minWinTurn 이후부터만 가능)
   if(state.hp[idx] >= 3){
     state.running = false;
     el.status.textContent = "쨍—! 💥 당첨!";

@@ -1,13 +1,13 @@
 :root{
   --bg1:#06121f;
   --bg2:#04080f;
-  --panel:rgba(255,255,255,.06);
-  --line:rgba(255,255,255,.12);
+  --panel: rgba(255,255,255,.06);
+  --line: rgba(255,255,255,.12);
   --text:#eaf4ff;
   --muted:#9fb4cc;
 }
 
-*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+*{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 html,body{ height:100%; }
 body{
   margin:0;
@@ -34,23 +34,24 @@ body{
 .h1{ margin:4px 0 8px; font-size: clamp(20px, 4.6vw, 30px); }
 .sub{ margin:0 0 14px; color:var(--muted); line-height:1.45; }
 
-.row{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
-.label{ display:flex; flex-direction:column; gap:6px; min-width:160px; color:var(--muted); font-size:13px; }
-
+.row{
+  display:flex; gap:10px; flex-wrap:wrap; align-items:end;
+}
+.label{
+  display:flex; flex-direction:column; gap:6px;
+  min-width:160px; color:var(--muted); font-size:13px;
+}
 .input{
   height:42px; padding:0 12px; border-radius:12px;
   border:1px solid var(--line);
   background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline:none;
+  color: var(--text); outline:none;
 }
-
 .btn{
   height:42px; padding:0 14px; border-radius:12px;
   border:1px solid var(--line);
   background: rgba(255,255,255,.06);
-  color: var(--text);
-  cursor:pointer;
+  color: var(--text); cursor:pointer;
 }
 .btn.primary{
   border-color: rgba(150,235,255,.40);
@@ -77,8 +78,7 @@ body{
   height:42px; padding:0 12px; border-radius:12px;
   border:1px solid var(--line);
   background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline:none;
+  color: var(--text); outline:none;
 }
 
 /* GAME */
@@ -99,7 +99,7 @@ body{
   height:100vh;
   padding-top:62px;
 
-  /* ✅ iOS safe-area + 잘림 방지 */
+  /* ✅ iOS safe-area + 오른쪽 잘림 방지 */
   padding-left: calc(14px + env(safe-area-inset-left));
   padding-right: calc(14px + env(safe-area-inset-right));
   overflow:hidden;
@@ -112,7 +112,7 @@ body{
   height: calc(100vh - 62px);
   display:grid;
   gap:12px;
-  padding: 16px 0 160px; /* 좌우는 stage가 담당 */
+  padding: 16px 0 160px;  /* 좌우는 stage가 담당 */
   align-content:start;
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   overflow-x:hidden;
@@ -139,7 +139,6 @@ body{
     inset 0 1px 0 rgba(255,255,255,.14);
   transform: translateZ(0);
 }
-
 .cube .labelText{ position:relative; z-index:2; }
 
 /* 위험도 게이지 */
@@ -171,7 +170,7 @@ body{
   z-index:2;
 }
 
-/* 크랙 오버레이(애니메이션) */
+/* 크랙 오버레이 */
 .cracks{
   position:absolute;
   inset:0;
@@ -187,7 +186,6 @@ body{
   transform: scale(.98);
 }
 
-/* 단계별: 더 극명 + 모션 */
 .cube.crack1 .cracks{
   opacity:.55;
   animation: crackPop .35s ease-out;
@@ -235,12 +233,17 @@ body{
   100%{ transform: scale(.99); }
 }
 
-/* 펭귄 */
+/* ✅ 펭귄 (iOS Safari 안정판: translate3d + 최상단 z-index) */
 .penguin{
   position: fixed;
-  z-index: 60;
-  pointer-events:none;
-  transform: translate(-9999px, -9999px);
+  left: 0;
+  top: 0;
+  z-index: 999;
+  pointer-events: none;
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  transform: translate3d(-9999px, -9999px, 0);
   will-change: transform;
   filter: drop-shadow(0 10px 14px rgba(0,0,0,.38));
 }
@@ -254,12 +257,8 @@ body{
   transform: rotate(20deg);
   opacity:.95;
 }
-.penguin.smash .p-hammer{
-  animation: hammer 0.42s ease-in-out;
-}
-.penguin.smash .p-body{
-  animation: bodyBop 0.42s ease-in-out;
-}
+.penguin.smash .p-hammer{ animation: hammer 0.42s ease-in-out; }
+.penguin.smash .p-body{ animation: bodyBop 0.42s ease-in-out; }
 
 @keyframes hammer{
   0%{ transform: rotate(15deg) translate(0,0); }
@@ -298,7 +297,9 @@ body{
 .winner{ margin-top:10px; font-size: clamp(22px, 7vw, 40px); font-weight: 900; }
 .resultBtns{ margin-top: 14px; display:flex; gap: 10px; justify-content:center; flex-wrap: wrap; }
 .resultBtns .btn{ min-width: 140px; }
+.resultHint{ margin-top: 10px; font-size: 12.5px; color: var(--muted); }
 
+/* 모바일 */
 @media (max-width: 520px){
   .grid{
     gap: 10px;

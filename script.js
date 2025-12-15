@@ -1,26 +1,22 @@
 "use strict";
 
 /**
- * 업데이트 내용
- * 1) 설정 끝나면 게임 화면만 보이게 전환 (setupView 숨김, gameView 표시)
- * 2) 게임 화면은 100vh 고정 + body 스크롤 잠금
- * 3) 펭귄이 우승 큐브로 이동해서 해머질 → 큐브 깨짐 → 결과 공개
+ * 포함된 기능
+ * (1) 펭귄이 여러 큐브를 랜덤 순회하다가 마지막에 우승 큐브를 깸
+ * (2) 균열 단계 연출(레벨 1~3): crack1 -> crack2 -> crack3 -> breaking
+ * (3) 빙판 "미끄러짐" 이동 모션(transition/easing + sliding class)
  */
 
 const els = {
-  // views
   setupView: document.getElementById("setupView"),
   gameView: document.getElementById("gameView"),
-  stage: document.getElementById("stage"),
 
-  // setup controls
   countInput: document.getElementById("countInput"),
   applyBtn: document.getElementById("applyBtn"),
   startBtn: document.getElementById("startBtn"),
   resetBtn: document.getElementById("resetBtn"),
   nameInputs: document.getElementById("nameInputs"),
 
-  // game controls
   backBtn: document.getElementById("backBtn"),
   floatingStart: document.getElementById("floatingStart"),
   againBtn: document.getElementById("againBtn"),
@@ -67,6 +63,9 @@ function lockBodyScroll(lock) {
   document.body.style.overflow = lock ? "hidden" : "";
   document.documentElement.style.overflow = lock ? "hidden" : "";
 }
+function sleep(ms) {
+  return new Promise((res) => setTimeout(res, ms));
+}
 
 // ---------- Audio (WebAudio) ----------
 let audioCtx = null;
@@ -92,12 +91,18 @@ function beep({ freq = 440, dur = 0.08, type = "sine", gain = 0.05, when = 0 }) 
   osc.start(t0);
   osc.stop(t0 + dur + 0.02);
 }
-function crackSequence() {
-  beep({ freq: 520, dur: 0.05, type: "triangle", gain: 0.045, when: 0.00 });
-  beep({ freq: 640, dur: 0.05, type: "triangle", gain: 0.045, when: 0.06 });
-  beep({ freq: 480, dur: 0.06, type: "triangle", gain: 0.040, when: 0.12 });
+
+function sfxCrack(level = 1) {
+  // 레벨이 올라갈수록 살짝 더 날카롭게
+  const base = 520 + level * 60;
+  beep({ freq: base, dur: 0.05, type: "triangle", gain: 0.040, when: 0.00 });
+  beep({ freq: base + 120, dur: 0.05, type: "triangle", gain: 0.040, when: 0.06 });
+  beep({ freq: base - 80, dur: 0.06, type: "triangle", gain: 0.036, when: 0.12 });
 }
-function breakBoom() {
+function sfxHammer() {
+  beep({ freq: 220, dur: 0.05, type: "square", gain: 0.024, when: 0.00 });
+}
+function sfxBreakBoom() {
   beep({ freq: 140, dur: 0.12, type: "sine", gain: 0.08, when: 0.00 });
   beep({ freq: 920, dur: 0.06, type: "square", gain: 0.03, when: 0.02 });
   beep({ freq: 660, dur: 0.08, type: "triangle", gain: 0.035, when: 0.06 });
@@ -157,12 +162,15 @@ function buildCubes(names) {
   els.grid.appendChild(frag);
 }
 
+function getCubes() {
+  return Array.from(els.grid.querySelectorAll(".cube"));
+}
+
 // ---------- View switching ----------
 function showGameView() {
   els.setupView.hidden = true;
   els.gameView.hidden = false;
   lockBodyScroll(true);
-  // 게임 시작할 때 결과 박스 숨김
   els.resultBox.hidden = true;
 }
 function showSetupView() {
@@ -171,37 +179,33 @@ function showSetupView() {
   lockBodyScroll(false);
 }
 
-// ---------- Penguin positioning ----------
-function movePenguinToCube(index, { immediate = false } = {}) {
-  const cubes = Array.from(els.grid.querySelectorAll(".cube"));
+// ---------- Penguin positioning & motion ----------
+function setPenguinXY(x, y) {
+  els.penguin.style.setProperty("--px", `${x}px`);
+  els.penguin.style.setProperty("--py", `${y}px`);
+  els.penguin.style.transform = `translate(${x}px, ${y}px)`;
+}
+function movePenguinToCube(index) {
+  const cubes = getCubes();
   const target = cubes[index];
   if (!target) return;
 
   const r = target.getBoundingClientRect();
-  // 큐브 상단 중앙에 펭귄 위치
-  const x = r.left + r.width * 0.5 - 36; // penguin width/2
+  const x = r.left + r.width * 0.5 - 36;
   const y = r.top + r.height * 0.15 - 36;
 
-  // waddle 애니메이션 transform과 충돌 방지용: CSS 변수 사용
-  els.penguin.style.setProperty("--px", `${x}px`);
-  els.penguin.style.setProperty("--py", `${y}px`);
-
-  if (immediate) {
-    els.penguin.style.transition = "none";
-    els.penguin.style.transform = `translate(${x}px, ${y}px)`;
-    // 강제로 reflow 후 복구
-    void els.penguin.offsetHeight;
-    els.penguin.style.transition = "";
-  } else {
-    els.penguin.style.transform = `translate(${x}px, ${y}px)`;
-  }
+  // sliding 느낌
+  els.penguin.classList.add("sliding");
+  setPenguinXY(x, y);
 }
-
 function penguinWalkStart() {
   els.penguin.classList.add("walking");
 }
 function penguinWalkStop() {
   els.penguin.classList.remove("walking");
+}
+function penguinSlideStop() {
+  els.penguin.classList.remove("sliding");
 }
 function penguinHammerStart() {
   els.penguin.classList.add("hammering");
@@ -210,18 +214,11 @@ function penguinHammerStop() {
   els.penguin.classList.remove("hammering");
 }
 
-// ---------- Flow helpers ----------
-function lockUISetup(locked) {
-  els.applyBtn.disabled = locked;
-  els.resetBtn.disabled = locked;
-  els.countInput.disabled = locked;
-  Array.from(els.nameInputs.querySelectorAll("input")).forEach((i) => (i.disabled = locked));
-}
-
+// ---------- Stage helpers ----------
 function resetStageVisual() {
   clearTimers();
-  Array.from(els.grid.querySelectorAll(".cube")).forEach((cube) => {
-    cube.classList.remove("cracking", "breaking", "frozen");
+  getCubes().forEach((cube) => {
+    cube.classList.remove("crack1","crack2","crack3","breaking","frozen","shake","target");
   });
 
   els.resultBox.hidden = true;
@@ -229,9 +226,9 @@ function resetStageVisual() {
   els.resultSub.textContent = "다시 뽑으려면 START";
   setStatus("대기 중…");
 
-  // 펭귄 초기 위치(화면 바깥)
   penguinWalkStop();
   penguinHammerStop();
+  penguinSlideStop();
   els.penguin.style.transform = "translate(-9999px, -9999px)";
 }
 
@@ -239,101 +236,132 @@ function ensureGameBoardFromSetup() {
   const raw = readInputs();
   const names = normalizeNames(raw);
   state.names = raw; // 입력값 유지
-
   buildCubes(names);
   resetStageVisual();
-
   return names;
 }
 
-// ---------- Main draw ----------
-function startDraw(names) {
+function pickTourIndices(count, winnerIndex) {
+  // (1) 랜덤 순회: winner를 제외한 후보에서 몇 개를 랜덤 방문 후 마지막에 winner
+  const all = Array.from({ length: count }, (_, i) => i).filter(i => i !== winnerIndex);
+
+  // 방문 개수: 2~min(5, count-1)
+  const k = clampInt(2 + Math.floor(Math.random() * 4), 2, Math.max(2, Math.min(5, all.length)));
+
+  // 셔플
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+
+  const tour = all.slice(0, k);
+  tour.push(winnerIndex); // 마지막은 winner
+  return tour;
+}
+
+// ---------- Main draw (async) ----------
+async function startDraw(names) {
   if (state.isRunning) return;
   state.isRunning = true;
+  ensureAudio();
 
-  ensureAudio(); // 모바일 오디오 unlock
   resetStageVisual();
 
-  const cubes = Array.from(els.grid.querySelectorAll(".cube"));
-
-  // winner 확정(공정성)
+  // winner 확정
   state.winnerIndex = Math.floor(Math.random() * names.length);
 
-  setStatus("얼음이 갈라지고 있어요… ❄️");
-  crackSequence();
+  const cubes = getCubes();
+  const tour = pickTourIndices(names.length, state.winnerIndex);
 
-  // 1) 큐브들 cracking 시작
+  setStatus("펭귄이 후보를 살펴보는 중… 🐧");
+  // 펭귄 시작 위치(왼쪽 아래)
+  setPenguinXY(12, window.innerHeight - 120);
+  penguinWalkStart();
+  await sleep(180);
+
+  // (1) 랜덤 순회: 각 큐브에 잠깐 들러서 crack1만 주고 지나감
+  for (let t = 0; t < tour.length - 1; t++) {
+    const idx = tour[t];
+
+    cubes.forEach(c => c.classList.remove("target"));
+    cubes[idx]?.classList.add("target");
+
+    movePenguinToCube(idx);
+    sfxCrack(1);
+
+    // 후보 큐브 균열 1단계
+    cubes[idx]?.classList.add("crack1");
+
+    // 살짝 기다림(이동+확인)
+    await sleep(720);
+  }
+
+  // 마지막: winner
+  const win = state.winnerIndex;
+  cubes.forEach(c => c.classList.remove("target"));
+  cubes[win]?.classList.add("target");
+
+  setStatus("여기가 맞다… 얼음을 깨자! ❄️🔨");
+  movePenguinToCube(win);
+  await sleep(850);
+
+  // (2) 균열 단계 1→2→3 (펭귄 해머질과 연동)
+  penguinWalkStop();
+  penguinHammerStart();
+  cubes[win]?.classList.add("shake");
+
+  // crack1
+  cubes[win]?.classList.add("crack1");
+  sfxHammer(); sfxCrack(1);
+  await sleep(420);
+
+  // crack2
+  cubes[win]?.classList.remove("crack1");
+  cubes[win]?.classList.add("crack2");
+  sfxHammer(); sfxCrack(2);
+  await sleep(420);
+
+  // crack3
+  cubes[win]?.classList.remove("crack2");
+  cubes[win]?.classList.add("crack3");
+  sfxHammer(); sfxCrack(3);
+  await sleep(520);
+
+  // (3) 최종 깨짐
+  setStatus("쨍—! 💥 결과 공개!");
+  penguinHammerStop();
+  cubes[win]?.classList.remove("shake","crack3");
+  cubes[win]?.classList.add("breaking");
+  sfxBreakBoom();
+
+  // 나머지 frozen
   cubes.forEach((c, i) => {
-    state.timers.push(setTimeout(() => c.classList.add("cracking"), 60 + i * 35));
+    if (i !== win) c.classList.add("frozen");
   });
 
-  // 2) 펭귄 등장 → 우승 큐브로 이동
-  //   - 먼저 화면 왼쪽 아래쯤에서 시작해 걸어가는 느낌
-  state.timers.push(setTimeout(() => {
-    // 시작 위치(대충 화면 왼쪽 아래)
-    const startX = 12;
-    const startY = window.innerHeight - 120;
-    els.penguin.style.setProperty("--px", `${startX}px`);
-    els.penguin.style.setProperty("--py", `${startY}px`);
-    els.penguin.style.transform = `translate(${startX}px, ${startY}px)`;
-    penguinWalkStart();
+  await sleep(520);
 
-    // 우승 큐브 위치로 이동
-    state.timers.push(setTimeout(() => {
-      movePenguinToCube(state.winnerIndex);
-    }, 150));
-  }, 500));
+  // 결과 표시
+  els.resultText.textContent = names[win];
+  els.resultBox.hidden = false;
+  setStatus("완료 ✅");
+  state.isRunning = false;
 
-  // 3) 도착 후 해머질
-  const HAMMER_AT = 2300;
-  state.timers.push(setTimeout(() => {
-    setStatus("펭귄이 얼음을 깨는 중… 🐧🔨");
-    penguinWalkStop();
-    penguinHammerStart();
-    // 해머 사운드 느낌
-    beep({ freq: 220, dur: 0.06, type: "square", gain: 0.025, when: 0.00 });
-    beep({ freq: 240, dur: 0.06, type: "square", gain: 0.025, when: 0.18 });
-    beep({ freq: 260, dur: 0.06, type: "square", gain: 0.025, when: 0.36 });
-  }, HAMMER_AT));
-
-  // 4) 깨짐(우승 큐브만 breaking)
-  const BREAK_AT = 3500;
-  state.timers.push(setTimeout(() => {
-    setStatus("쨍—! 💥 결과 공개!");
-    breakBoom();
-    penguinHammerStop();
-
-    cubes.forEach((c, i) => {
-      c.classList.remove("cracking");
-      if (i === state.winnerIndex) c.classList.add("breaking");
-      else c.classList.add("frozen");
-    });
-  }, BREAK_AT));
-
-  // 5) 결과 표시
-  const SHOW_AT = 4200;
-  state.timers.push(setTimeout(() => {
-    const winName = names[state.winnerIndex];
-    els.resultText.textContent = winName;
-    els.resultBox.hidden = false;
-    setStatus("완료 ✅");
-    state.isRunning = false;
-  }, SHOW_AT));
+  // 슬라이딩 상태 정리(약간의 여운 후)
+  await sleep(400);
+  penguinSlideStop();
 }
 
 // ---------- Setup actions ----------
 function applyCount() {
   if (state.isRunning) return;
-
-  const n = clampInt(parseInt(els.countInput.value, 10) || state.count, 2, 12);
-  state.count = n;
+  state.count = clampInt(parseInt(els.countInput.value, 10) || state.count, 2, 12);
 
   const current = readInputs();
   state.names = current;
 
   buildInputs(state.count);
 }
-
 function resetAll() {
   if (state.isRunning) return;
   clearTimers();
@@ -359,35 +387,25 @@ function toggleSound() {
 function init() {
   buildInputs(state.count);
 
-  // setup 버튼
   els.applyBtn.addEventListener("click", applyCount);
   els.resetBtn.addEventListener("click", resetAll);
   els.soundBtn.addEventListener("click", toggleSound);
 
-  // setup START → 게임 화면으로 전환 + 보드 생성 + START 실행
+  // setup START
   els.startBtn.addEventListener("click", () => {
     if (state.isRunning) return;
-
-    // 먼저 보드 만들고 게임뷰로 전환
     const names = ensureGameBoardFromSetup();
     showGameView();
-
-    // 펭귄 위치 계산을 위해 한 프레임 뒤 실행
-    requestAnimationFrame(() => {
-      startDraw(names);
-    });
+    requestAnimationFrame(() => startDraw(names));
   });
 
-  // 게임뷰 상단/하단 START
+  // 게임뷰 START/Again
   els.floatingStart.addEventListener("click", () => {
     if (state.isRunning) return;
-    // 현재 입력값으로 names 재생성 (설정 화면 값 유지 기준)
     const names = normalizeNames(state.names.length ? state.names : readInputs());
     buildCubes(names);
     requestAnimationFrame(() => startDraw(names));
   });
-
-  // 결과 박스 버튼
   els.againBtn.addEventListener("click", () => {
     if (state.isRunning) return;
     const names = normalizeNames(state.names.length ? state.names : readInputs());
@@ -395,26 +413,24 @@ function init() {
     requestAnimationFrame(() => startDraw(names));
   });
 
+  // 이름 수정
   els.editBtn.addEventListener("click", () => {
-    // 설정 화면으로 돌아가 이름 수정
     showSetupView();
     state.isRunning = false;
     resetStageVisual();
-    lockUISetup(false);
   });
 
-  // 상단바: 설정으로
+  // 설정으로
   els.backBtn.addEventListener("click", () => {
     showSetupView();
     state.isRunning = false;
     resetStageVisual();
-    lockUISetup(false);
   });
 
-  // 창 크기 바뀌면 펭귄 위치 재계산 (진행 중이면 winner 큐브로 따라가게)
+  // 리사이즈 시 현재 위치 보정
   window.addEventListener("resize", () => {
-    if (state.winnerIndex !== null && !els.gameView.hidden) {
-      movePenguinToCube(state.winnerIndex, { immediate: true });
+    if (!els.gameView.hidden && state.winnerIndex !== null) {
+      movePenguinToCube(state.winnerIndex);
     }
   });
 }

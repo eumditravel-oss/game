@@ -294,6 +294,9 @@ body{
   align-items: center;
   justify-content: center;
   padding: 20px;
+  /* ✅ hidden 속성 강제 적용 (결과창/화면 전환 버그 해결) */
+[hidden]{ display:none !important; }
+
 }
 .resultLabel{
   letter-spacing: .9px;

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>🐧 Ice Cube Draw</title>
-  <link rel="stylesheet" href="style.css?v=20251215-2" />
+  <link rel="stylesheet" href="style.css?v=final1" />
 </head>
 <body>
   <main class="wrap">
@@ -12,14 +12,13 @@
     <!-- SETUP -->
     <section id="setup" class="card">
       <h1 class="h1">🐧 Ice Cube Draw</h1>
-      <p class="sub">얼음이 <b>3단계</b> 누적되면 당첨! (중반부터 2연속 파손 가능)</p>
+      <p class="sub">얼음이 <b>3단계</b> 깨지면 당첨! (중반부터 복불복 가속)</p>
 
       <div class="row">
         <label class="label">
           선택지 개수
           <input id="count" class="input" type="number" min="2" max="12" value="6" />
         </label>
-
         <button id="apply" class="btn">개수 적용</button>
         <button id="start" class="btn primary">START</button>
       </div>
@@ -27,7 +26,7 @@
       <div class="namesBox">
         <div class="namesHeader">
           <div class="namesTitle">선택지 이름</div>
-          <div class="namesHint">빈칸은 자동으로 “선택지 n”</div>
+          <div class="namesHint">비우면 자동 입력</div>
         </div>
         <div id="names" class="namesGrid"></div>
       </div>
@@ -42,25 +41,18 @@
       </div>
 
       <div class="stage">
-        <div id="grid" class="grid" aria-live="polite"></div>
-        <div id="penguin" class="penguin" aria-hidden="true">🐧</div>
+        <div id="grid" class="grid"></div>
+        <div id="penguin" class="penguin">🐧</div>
 
-        <!-- RESULT overlay -->
+        <!-- RESULT -->
         <div id="result" class="result" hidden>
-          <div class="resultCard" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
-            <div class="resultTop">
-              <div class="resultLabel" id="resultTitle">RESULT</div>
-              <div class="resultBang">쨍!</div>
-            </div>
-
+          <div class="resultCard">
+            <div class="resultLabel">RESULT</div>
             <div id="winner" class="winner">-</div>
-
             <div class="resultBtns">
               <button id="again" class="btn primary">다시 뽑기</button>
               <button id="toSetup" class="btn">처음부터</button>
             </div>
-
-            <div class="resultHint">처음부터를 누르면 선택지 입력 화면으로 돌아가요.</div>
           </div>
         </div>
       </div>
@@ -68,6 +60,6 @@
 
   </main>
 
-  <script src="script.js?v=20251215-2"></script>
+  <script src="script.js?v=final1"></script>
 </body>
 </html>

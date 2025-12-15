@@ -6,8 +6,7 @@
   --text:#eaf4ff;
   --muted:#9fb4cc;
 }
-
-*{ box-sizing:border-box; }
+*{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 html,body{ height:100%; }
 body{
   margin:0;
@@ -19,12 +18,8 @@ body{
     linear-gradient(180deg, var(--bg1), var(--bg2));
 }
 
-.wrap{
-  min-height:100%;
-  padding: 16px;
-}
+.wrap{ min-height:100%; padding:16px; }
 
-/* SETUP card */
 .card{
   max-width: 860px;
   margin: 0 auto;
@@ -34,41 +29,21 @@ body{
   border-radius: 16px;
   box-shadow: 0 16px 40px rgba(0,0,0,.35);
 }
-
-.h1{
-  margin: 4px 0 8px;
-  font-size: clamp(20px, 4.6vw, 30px);
-}
-.sub{
-  margin: 0 0 14px;
-  color: var(--muted);
-  line-height:1.45;
-}
+.h1{ margin:4px 0 8px; font-size: clamp(20px, 4.6vw, 30px); }
+.sub{ margin:0 0 14px; color:var(--muted); line-height:1.45; }
 
 .row{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: end;
+  display:flex; gap:10px; flex-wrap:wrap; align-items:end;
 }
-
 .label{
-  display:flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 160px;
-  color: var(--muted);
-  font-size: 13px;
+  display:flex; flex-direction:column; gap:6px;
+  min-width:160px; color:var(--muted); font-size:13px;
 }
-
 .input{
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
+  height:42px; padding:0 12px; border-radius:12px;
+  border:1px solid var(--line);
   background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline: none;
+  color: var(--text); outline:none;
 }
 .input:focus{
   border-color: rgba(170,235,255,.45);
@@ -76,13 +51,10 @@ body{
 }
 
 .btn{
-  height: 42px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
+  height:42px; padding:0 14px; border-radius:12px;
+  border:1px solid var(--line);
   background: rgba(255,255,255,.06);
-  color: var(--text);
-  cursor:pointer;
+  color: var(--text); cursor:pointer;
 }
 .btn.primary{
   border-color: rgba(150,235,255,.40);
@@ -90,117 +62,75 @@ body{
   font-weight: 800;
 }
 .btn.small{
-  height: 36px;
-  border-radius: 999px;
-  font-size: 13px;
-  padding: 0 12px;
+  height:36px; border-radius:999px; font-size:13px; padding:0 12px;
 }
 
 /* names */
-.namesBox{
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
+.namesBox{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
 .namesHeader{
-  display:flex;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: baseline;
+  display:flex; justify-content:space-between; gap:10px;
+  flex-wrap:wrap; align-items:baseline;
 }
 .namesTitle{ font-weight:800; }
-.namesHint{ color: var(--muted); font-size: 12.5px; }
+.namesHint{ color:var(--muted); font-size:12.5px; }
 
 .namesGrid{
-  margin-top: 10px;
-  display:grid;
-  gap: 10px;
+  margin-top:10px;
+  display:grid; gap:10px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .namesGrid input{
-  height: 42px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
+  height:42px; padding:0 12px; border-radius:12px;
+  border:1px solid var(--line);
   background: rgba(0,0,0,.18);
-  color: var(--text);
-  outline:none;
+  color: var(--text); outline:none;
 }
 
-/* GAME layout */
-.game{
-  width: 100%;
-  height: 100vh;
-  overflow: hidden;
-}
+/* GAME */
+.game{ width:100%; height:100vh; overflow:hidden; }
 .topBar{
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  z-index: 40;
-  max-width: 980px;
-  margin: 0 auto;
-  display:flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 0 6px;
+  position:fixed; top:10px; left:10px; right:10px;
+  z-index:40; max-width:980px; margin:0 auto;
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:0 6px;
 }
 .status{
-  flex: 1;
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  flex:1; text-align:center; color:var(--muted); font-size:13px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
-
 .stage{
-  position: relative;
-  height: 100vh;
-  width: 100vw;
-  padding-top: 62px;
-  overflow: hidden;
+  position:relative; height:100vh; width:100vw;
+  padding-top:62px; overflow:hidden;
 }
 
-/* ✅ 자동 반응형: 어떤 화면에서도 겹침 방지 */
+/* ✅ 모바일에서도 겹치지 않게 auto-fit */
 .grid{
-  max-width: 980px;
-  margin: 0 auto;
+  max-width:980px;
+  margin:0 auto;
   height: calc(100vh - 62px);
-  display: grid;
-  gap: 12px;
-  padding: 16px 14px 140px; /* result/버튼 안전영역 */
-  align-content: start;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  display:grid;
+  gap:12px;
+  padding: 16px 14px 160px; /* 결과/버튼 안전영역 더 확보 */
+  align-content:start;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
 }
 
-/* cubes */
 .cube{
-  position: relative;
-  border-radius: 16px;
-  aspect-ratio: 1 / 1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding: 10px;
+  position:relative;
+  border-radius:16px;
+  aspect-ratio:1/1;
+  display:flex; align-items:center; justify-content:center;
+  padding:10px;
   text-align:center;
-  font-weight: 900;
+  font-weight:900;
   user-select:none;
-  border: 1px solid rgba(210, 245, 255, .22);
-
+  border:1px solid rgba(210,245,255,.22);
   background:
     radial-gradient(120px 90px at 30% 20%, rgba(255,255,255,.20), transparent 55%),
     linear-gradient(135deg, rgba(175,232,255,.30), rgba(210,248,255,.10));
-  box-shadow:
-    0 12px 26px rgba(0,0,0,.30),
-    inset 0 1px 0 rgba(255,255,255,.14);
+  box-shadow: 0 12px 26px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.14);
   transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, filter .18s ease;
 }
-
 .cube.target{
   transform: translateY(-3px) scale(1.03);
   border-color: rgba(255,255,255,.50);
@@ -211,19 +141,16 @@ body{
     inset 0 1px 0 rgba(255,255,255,.16);
 }
 
-/* 단계별 효과를 “극명하게” */
 .cube::after{
   content:"";
-  position:absolute;
-  inset:0;
+  position:absolute; inset:0;
   border-radius:16px;
   pointer-events:none;
   opacity:0;
 }
 
-.cube.crack1{
-  filter: saturate(1.05);
-}
+/* 3단계 균열 차이 “극명” */
+.cube.crack1{ filter:saturate(1.05); }
 .cube.crack1::after{
   opacity:.55;
   background:
@@ -234,10 +161,7 @@ body{
 
 .cube.crack2{
   border-color: rgba(255, 220, 170, .55);
-  box-shadow:
-    0 18px 36px rgba(0,0,0,.44),
-    0 0 0 7px rgba(255,170,80,.10),
-    inset 0 1px 0 rgba(255,255,255,.18);
+  box-shadow: 0 18px 36px rgba(0,0,0,.44), 0 0 0 7px rgba(255,170,80,.10), inset 0 1px 0 rgba(255,255,255,.18);
   animation: shake .16s infinite;
 }
 .cube.crack2::after{
@@ -251,10 +175,7 @@ body{
 
 .cube.crack3{
   border-color: rgba(255, 170, 170, .70);
-  box-shadow:
-    0 22px 50px rgba(0,0,0,.55),
-    0 0 70px rgba(255,70,70,.22),
-    inset 0 1px 0 rgba(255,255,255,.18);
+  box-shadow: 0 22px 50px rgba(0,0,0,.55), 0 0 70px rgba(255,70,70,.22), inset 0 1px 0 rgba(255,255,255,.18);
   filter: saturate(1.25);
 }
 .cube.crack3::after{
@@ -275,11 +196,11 @@ body{
 
 /* Penguin */
 .penguin{
-  position: fixed;
-  z-index: 60;
-  font-size: 38px;
+  position:fixed;
+  z-index:60;
+  font-size:38px;
   transform: translate(-9999px, -9999px);
-  pointer-events: none;
+  pointer-events:none;
   filter: drop-shadow(0 10px 14px rgba(0,0,0,.38));
 }
 
@@ -294,23 +215,12 @@ body{
   align-items: center;
   justify-content: center;
   padding: 20px;
-  /* ✅ hidden 속성 강제 적용 (결과창/화면 전환 버그 해결) */
-[hidden]{ display:none !important; }
-
 }
-.resultLabel{
-  letter-spacing: .9px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.winner{
-  margin-top: 10px;
-  font-size: clamp(22px, 6vw, 40px);
-  font-weight: 900;
-}
+.resultLabel{ letter-spacing:.9px; color:var(--muted); font-size:12px; }
+.winner{ margin-top:10px; font-size: clamp(22px, 6vw, 40px); font-weight: 900; }
 .result .btn{ margin-top: 14px; }
 
-/* 모바일 입력칸 안정화 */
+/* ✅ 모바일 입력 안정 */
 @media (max-width: 720px){
   .namesGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -320,6 +230,6 @@ body{
   .label{ min-width: 100%; }
   .btn{ flex: 1; }
 }
- 
-/* hidden 속성은 무조건 숨김 (RESULT가 먼저 뜨는 문제 해결) */
+
+/* ✅ hidden은 무조건 숨김 (모바일에서 결과창 먼저 뜨는 문제 방지) */
 [hidden]{ display:none !important; }

@@ -98,8 +98,6 @@ body{
   position:relative;
   height:100vh;
   padding-top:62px;
-
-  /* ✅ iOS safe-area + 오른쪽 잘림 방지 */
   padding-left: calc(14px + env(safe-area-inset-left));
   padding-right: calc(14px + env(safe-area-inset-right));
   overflow:hidden;
@@ -112,7 +110,7 @@ body{
   height: calc(100vh - 62px);
   display:grid;
   gap:12px;
-  padding: 16px 0 160px;  /* 좌우는 stage가 담당 */
+  padding: 16px 0 160px;
   align-content:start;
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   overflow-x:hidden;
@@ -170,7 +168,7 @@ body{
   z-index:2;
 }
 
-/* 크랙 오버레이 */
+/* 크랙 */
 .cracks{
   position:absolute;
   inset:0;
@@ -185,11 +183,7 @@ body{
   mix-blend-mode: screen;
   transform: scale(.98);
 }
-
-.cube.crack1 .cracks{
-  opacity:.55;
-  animation: crackPop .35s ease-out;
-}
+.cube.crack1 .cracks{ opacity:.55; animation: crackPop .35s ease-out; }
 .cube.crack2{
   border-color: rgba(255, 220, 170, .55);
   box-shadow: 0 18px 36px rgba(0,0,0,.44), 0 0 0 7px rgba(255,170,80,.10), inset 0 1px 0 rgba(255,255,255,.18);
@@ -233,7 +227,7 @@ body{
   100%{ transform: scale(.99); }
 }
 
-/* ✅ 펭귄 (iOS Safari 안정판: translate3d + 최상단 z-index) */
+/* 펭귄 (translate3d 안정판) */
 .penguin{
   position: fixed;
   left: 0;
@@ -259,7 +253,6 @@ body{
 }
 .penguin.smash .p-hammer{ animation: hammer 0.42s ease-in-out; }
 .penguin.smash .p-body{ animation: bodyBop 0.42s ease-in-out; }
-
 @keyframes hammer{
   0%{ transform: rotate(15deg) translate(0,0); }
   40%{ transform: rotate(-55deg) translate(2px,2px); }
@@ -301,10 +294,7 @@ body{
 
 /* 모바일 */
 @media (max-width: 520px){
-  .grid{
-    gap: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  .grid{ gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .namesGrid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .resultBtns .btn{ min-width: 0; flex: 1; }
 }
@@ -312,5 +302,4 @@ body{
   .namesGrid{ grid-template-columns: 1fr; }
 }
 
-/* hidden 강제 */
 [hidden]{ display:none !important; }

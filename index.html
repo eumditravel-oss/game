@@ -3,23 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Ice Cube Roulette</title>
+  <title>🐧 Ice Cube Draw</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <section id="setup">
   <h1>🐧 Ice Cube Draw</h1>
+  <p>얼음이 3번 깨지면 바로 당첨!</p>
+
   <input id="count" type="number" min="2" max="12" value="6">
   <div id="names"></div>
+
   <button id="start">START</button>
 </section>
 
 <section id="game" hidden>
   <div id="grid"></div>
-  <div id="penguin"></div>
+
+  <!-- Penguin -->
+  <div id="penguin">🐧</div>
+
+  <!-- Result -->
   <div id="result" hidden>
     <h2 id="winner"></h2>
-    <button onclick="location.reload()">다시</button>
+    <button onclick="location.reload()">다시 하기</button>
   </div>
 </section>
 

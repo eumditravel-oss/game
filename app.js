@@ -52,17 +52,21 @@ function injectLabelStyles(){
       pointer-events:none;
       user-select:none;
 
-      /* ✅ 가독성 */
-      width: 200px;               /* 길이 제한(긴 글자 줄임표) */
       font-weight: 900;
-      font-size: 15px;
       letter-spacing: -0.25px;
       color: rgba(255,255,255,0.98);
+      text-align: center;
+      line-height: 1.05;
 
       -webkit-text-stroke: 1px rgba(0,0,0,0.62);
       text-shadow:
         0 2px 12px rgba(0,0,0,0.78),
         0 1px 0 rgba(0,0,0,0.35);
+
+      /* 배경 살짝(가독성) */
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.10);
 
       white-space: nowrap;
       overflow: hidden;
@@ -71,8 +75,6 @@ function injectLabelStyles(){
 
     @media (max-width: 520px){
       .slice-label{
-        font-size: 13px;
-        width: 180px;
         -webkit-text-stroke: 0.9px rgba(0,0,0,0.62);
       }
     }
@@ -80,32 +82,83 @@ function injectLabelStyles(){
   document.head.appendChild(style);
 }
 
+/* ---- 텍스트 폭에 맞춰 폰트 크기 자동 계산 ---- */
+const _canvas = document.createElement("canvas");
+const _ctx = _canvas.getContext("2d");
+
+function fitFontSize(text, maxWidthPx, fontFamily, minPx = 11, maxPx = 22){
+  // maxWidthPx 안에 들어가도록 최대 폰트 크기 찾기 (이분 탐색)
+  let lo = minPx;
+  let hi = maxPx;
+  let best = minPx;
+
+  while(lo <= hi){
+    const mid = (lo + hi) >> 1;
+    _ctx.font = `900 ${mid}px ${fontFamily}`;
+    const w = _ctx.measureText(text).width;
+
+    if(w <= maxWidthPx){
+      best = mid;
+      lo = mid + 1;
+    }else{
+      hi = mid - 1;
+    }
+  }
+  return best;
+}
+
 /**
- * ✅ 핵심: %가 아니라 "px 반경"으로 정확히 원형 배치
- * - wheel 크기가 바뀌어도(모바일/리사이즈) 자동으로 정상 위치
+ * ✅ 핵심: 삼각형(섹터) 안 중앙에 배치
+ * - 반경 r에서 섹터 폭(호 길이) 계산 → 그 폭에 맞게 폰트 자동 확대
+ * - 왼쪽(180도 넘어가는) 섹터는 글자 뒤집히지 않게 180도 보정
  */
-function buildLabels(n){
+function buildLabels(){
+  const n = items.length;
+  const sliceDeg = 360 / n;
+
   wheel.innerHTML = "";
-  const frag = document.createDocumentFragment();
 
   const rect = wheel.getBoundingClientRect();
   const radius = Math.min(rect.width, rect.height) / 2;
 
-  // 테두리(10px) + 내부 글로우/링 + 안전여백 고려
-  // 숫자만 조절하면 글씨 위치를 쉽게 튜닝 가능
-  const rimPadding = 52;             // ✅ 글씨가 너무 바깥이면 ↑, 너무 안쪽이면 ↓
-  const textRadius = Math.max(10, radius - rimPadding);
+  // ✅ 삼각형 내부 중앙 느낌: 바깥쪽으로 너무 붙지 않게 0.64~0.72가 예쁨
+  const textRadius = radius * 0.68;
+
+  // 폰트 패밀리(스타일시트 body와 동일 계열)
+  const fontFamily =
+    `"Noto Sans KR", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Apple SD Gothic Neo", "Malgun Gothic"`;
+
+  const frag = document.createDocumentFragment();
 
   for(let i=0;i<n;i++){
+    const text = items[i];
+
+    // 섹터 중앙 각도
+    const angle = i * sliceDeg + sliceDeg / 2;
+
+    // 반경 textRadius에서의 섹터 폭(호 길이)
+    const arcLen = 2 * Math.PI * textRadius * (sliceDeg / 360);
+    const maxTextWidth = arcLen * 0.92; // 여유(양쪽 패딩 고려)
+
+    // 폰트 자동 확대(너무 크면 겹치니 상한선 둠)
+    const fontSize = fitFontSize(text, maxTextWidth, fontFamily, 11, 22);
+
     const label = document.createElement("div");
     label.className = "slice-label";
-    label.textContent = items[i];
+    label.textContent = text;
+    label.style.width = `${Math.max(90, Math.floor(maxTextWidth))}px`;
+    label.style.fontSize = `${fontSize}px`;
 
-    const angle = (360 / n) * i + (360 / n) / 2;
+    // 90~270도 구간(왼쪽 반)은 글자가 뒤집혀 보이므로 180도 보정
+    const flip = angle > 90 && angle < 270 ? 180 : 0;
 
-    // 중심에서 angle 방향으로 textRadius(px) 이동
-    // 마지막 rotate(90deg)는 글자가 섹터 방향으로 자연스럽게 보이도록 보정
-    label.style.transform = `rotate(${angle}deg) translateX(${textRadius}px) rotate(90deg)`;
+    // ✅ 변환 순서(오른쪽부터 적용):
+    // 1) translate(-50%,-50%)로 라벨 중심을 기준점으로
+    // 2) 왼쪽 반이면 180도 회전(글자 뒤집힘 방지)
+    // 3) 반경만큼 밖으로 이동(삼각형 내부 중앙)
+    // 4) 섹터 중앙 각도로 회전 배치
+    label.style.transform =
+      `rotate(${angle}deg) translate(${textRadius}px, 0) rotate(${flip}deg) translate(-50%, -50%)`;
 
     frag.appendChild(label);
   }
@@ -118,14 +171,14 @@ function init(){
   wheel.style.background = buildWheelBackground(items.length);
   wheel.style.position = "relative";
 
-  // 1차 배치(초기)
-  buildLabels(items.length);
+  // 1차
+  buildLabels();
 
-  // ✅ 렌더 완료 후 2차 배치(정확한 rect 확보)
-  requestAnimationFrame(() => buildLabels(items.length));
+  // 렌더 후 2차(크기 확정)
+  requestAnimationFrame(() => buildLabels());
 
-  // ✅ 창 크기 바뀌면 다시 정렬
-  window.addEventListener("resize", () => buildLabels(items.length));
+  // 리사이즈 대응
+  window.addEventListener("resize", () => buildLabels());
 }
 init();
 
@@ -142,6 +195,7 @@ function calcIndexFromRotation(rotationDeg){
   return Math.floor(pointerAngle / slice) % n;
 }
 
+/* 긴박감: 빠르게 돌고 → 마지막 느리게 → 살짝 지나쳤다가 되돌아오기 */
 function spin(){
   if(isSpinning) return;
   isSpinning = true;
@@ -152,32 +206,25 @@ function spin(){
   const slice = 360 / n;
 
   const winnerIndex = pickWinnerIndex();
-
-  // 섹터 중앙이 포인터에 오도록 목표각
   const targetToPointer = -(winnerIndex * slice + slice / 2);
 
-  // 긴박감: 고속 회전(7~8바퀴)
   const fastSpins = 7 + Math.floor(Math.random() * 2);
   const baseTarget = fastSpins * 360 + targetToPointer;
 
-  // 핀에 걸리는 느낌: 살짝 지나쳤다가 되돌아오기
-  const overshoot = slice * (0.20 + Math.random() * 0.10); // 20~30%
-  const back = overshoot * (0.60 + Math.random() * 0.15);  // 60~75%
+  const overshoot = slice * (0.20 + Math.random() * 0.10);
+  const back = overshoot * (0.60 + Math.random() * 0.15);
 
   const toOvershoot = currentRotation + baseTarget + overshoot;
   const toFinal = toOvershoot - back;
 
-  // 1) 빠르게 회전
   wheel.style.transition = "transform 3.35s cubic-bezier(.10,.85,.20,1)";
   wheel.style.transform = `rotate(${toOvershoot}deg)`;
 
-  // 2) 마지막 느리게 + 되돌림
   setTimeout(() => {
     wheel.style.transition = "transform 1.20s cubic-bezier(.18,.95,.25,1)";
     wheel.style.transform = `rotate(${toFinal}deg)`;
     currentRotation = toFinal;
 
-    // 3) 결과 표시
     setTimeout(() => {
       const idx = calcIndexFromRotation(currentRotation);
       resultText.textContent = items[idx];

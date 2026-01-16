@@ -41,7 +41,6 @@ function measureTextWidth(text, fontPx, fontFamily){
   return _ctx.measureText(text).width;
 }
 
-/* maxWidth 안에 들어가는 최대 font-size 찾기 */
 function fitFontSize(text, maxWidthPx, fontFamily, minPx = 12, maxPx = 26){
   let lo = minPx, hi = maxPx, best = minPx;
   while (lo <= hi){
@@ -57,10 +56,8 @@ function fitFontSize(text, maxWidthPx, fontFamily, minPx = 12, maxPx = 26){
   return best;
 }
 
-/* 각도 -> 라디안 */
 function deg2rad(d){ return (d * Math.PI) / 180; }
 
-/* 섹터 path 생성 */
 function sectorPath(cx, cy, r, startDeg, endDeg){
   const start = deg2rad(startDeg);
   const end = deg2rad(endDeg);
@@ -72,44 +69,41 @@ function sectorPath(cx, cy, r, startDeg, endDeg){
 
   const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
 
-  // 중심 -> 시작점 -> arc -> 중심
   return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 }
 
-/* HSL 색상 자동 생성 */
 function sliceColor(i, n){
   const hue = (i * (360 / n)) % 360;
   return `hsl(${hue} 75% 45%)`;
 }
 
-/* ✅ SVG 룰렛 생성: 섹터 안 “중앙 삼각형 영역”에 텍스트 배치 */
+/**
+ * ✅ SVG 룰렛 생성
+ * ✅ 텍스트 방향: "중심 -> 바깥(반지름 방향)" = 화살표 방향
+ */
 function buildWheelSVG(){
   const n = items.length;
   const sliceDeg = 360 / n;
 
-  // wheel DOM 크기에 맞춰 viewBox 고정 (정확한 비율 유지)
   const size = 500;
   const cx = size / 2;
   const cy = size / 2;
   const r = 240;
 
-  // 텍스트를 섹터 중앙에 넣을 반경(삼각형 가운데 느낌)
-  const textR = r * 0.62; // 원하면 0.58(더 안쪽) / 0.68(더 바깥쪽)
+  // 텍스트 위치 반경(삼각형 안쪽)
+  const textR = r * 0.62;
 
-  // 텍스트 폰트
   const fontFamily =
     `"Noto Sans KR", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Apple SD Gothic Neo", "Malgun Gothic"`;
 
-  // wheel 내부 초기화
   wheel.innerHTML = "";
 
   const svg = document.createElementNS(SVG_NS, "svg");
   svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
   svg.setAttribute("aria-label", "룰렛");
 
-  // 살짝 유리 느낌 오버레이(중앙 하이라이트)
+  // 유리 오버레이
   const defs = document.createElementNS(SVG_NS, "defs");
-
   const radial = document.createElementNS(SVG_NS, "radialGradient");
   radial.setAttribute("id", "glass");
   radial.innerHTML = `
@@ -119,11 +113,10 @@ function buildWheelSVG(){
     <stop offset="100%" stop-color="rgba(0,0,0,0.18)"/>
   `;
   defs.appendChild(radial);
-
   svg.appendChild(defs);
 
   for(let i=0;i<n;i++){
-    const startDeg = i * sliceDeg - 90;          // -90: 12시 기준 시작
+    const startDeg = i * sliceDeg - 90;   // 12시 기준
     const endDeg = (i+1) * sliceDeg - 90;
     const midDeg = (startDeg + endDeg) / 2;
 
@@ -134,23 +127,22 @@ function buildWheelSVG(){
     p.setAttribute("opacity", "0.96");
     svg.appendChild(p);
 
-    // 텍스트 위치(섹터 중앙 방향으로 textR만큼)
+    // 텍스트 위치(반지름 방향)
     const mid = deg2rad(midDeg);
     const tx = cx + textR * Math.cos(mid);
     const ty = cy + textR * Math.sin(mid);
 
-    // text가 들어갈 수 있는 최대 폭(해당 반경에서의 호 길이)
+    // 해당 반경에서 섹터 폭(호 길이)
     const arcLen = 2 * Math.PI * textR * (sliceDeg / 360);
-    const maxTextWidth = arcLen * 0.78; // 삼각형 안쪽이라 0.78 정도로 안전하게
+    const maxTextWidth = arcLen * 0.78;
 
-    // 글자 크기 자동 맞춤
     const fs = fitFontSize(items[i], maxTextWidth, fontFamily, 12, 26);
 
-    // ✅ 예시처럼 “섹터 방향으로 살짝 기울인” 텍스트
-    // 섹터 중앙선에 맞춰 회전 (읽기 좋게 좌측 반은 뒤집힘 방지)
-    let rot = midDeg + 90; // 라디얼 기준 텍스트가 섹터를 따라가게
+    // ✅ 핵심 변경: 반지름 방향 회전 = midDeg
+    // 가독성 위해 뒤집히는 구간은 180도 보정(읽기 좋게)
+    let rot = midDeg;
     const norm = ((rot % 360) + 360) % 360;
-    if (norm > 90 && norm < 270) rot += 180; // 뒤집힘 방지
+    if (norm > 90 && norm < 270) rot -= 180; // 왼쪽 반은 뒤집힘 방지(방향은 반지름 유지)
 
     const t = document.createElementNS(SVG_NS, "text");
     t.setAttribute("x", tx);
@@ -178,7 +170,7 @@ function buildWheelSVG(){
   glass.setAttribute("opacity", "0.75");
   svg.appendChild(glass);
 
-  // 얇은 림
+  // 림
   const rim = document.createElementNS(SVG_NS, "circle");
   rim.setAttribute("cx", cx);
   rim.setAttribute("cy", cy);
@@ -193,7 +185,6 @@ function buildWheelSVG(){
 
 function init(){
   buildWheelSVG();
-  // 리사이즈에도 텍스트가 깔끔하게 유지되도록 재생성
   window.addEventListener("resize", () => buildWheelSVG());
 }
 init();
@@ -211,7 +202,6 @@ function calcIndexFromRotation(rotationDeg){
   return Math.floor(pointerAngle / slice) % n;
 }
 
-/* 긴박감: 빠르게 돌고 → 마지막 느리게 → 살짝 지나쳤다가 되돌아오기 */
 function spin(){
   if(isSpinning) return;
   isSpinning = true;

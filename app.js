@@ -30,155 +30,171 @@ items.forEach((t) => {
   menuList.appendChild(li);
 });
 
-function buildWheelBackground(n){
-  const stops = [];
-  for(let i=0;i<n;i++){
-    const a0 = (i * 360) / n;
-    const a1 = ((i+1) * 360) / n;
-    const hue = (i * (360 / n)) % 360;
-    stops.push(`hsl(${hue} 75% 45%) ${a0}deg ${a1}deg`);
-  }
-  return `conic-gradient(${stops.join(",")})`;
-}
+const SVG_NS = "http://www.w3.org/2000/svg";
 
-function injectLabelStyles(){
-  const style = document.createElement("style");
-  style.textContent = `
-    .slice-label{
-      position:absolute;
-      left:50%;
-      top:50%;
-      transform-origin: 0 0;
-      pointer-events:none;
-      user-select:none;
-
-      font-weight: 900;
-      letter-spacing: -0.25px;
-      color: rgba(255,255,255,0.98);
-      text-align: center;
-      line-height: 1.05;
-
-      -webkit-text-stroke: 1px rgba(0,0,0,0.62);
-      text-shadow:
-        0 2px 12px rgba(0,0,0,0.78),
-        0 1px 0 rgba(0,0,0,0.35);
-
-      /* 배경 살짝(가독성) */
-      padding: 2px 6px;
-      border-radius: 999px;
-      background: rgba(0,0,0,0.10);
-
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    @media (max-width: 520px){
-      .slice-label{
-        -webkit-text-stroke: 0.9px rgba(0,0,0,0.62);
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-/* ---- 텍스트 폭에 맞춰 폰트 크기 자동 계산 ---- */
+/* 텍스트 폭 측정용 */
 const _canvas = document.createElement("canvas");
 const _ctx = _canvas.getContext("2d");
 
-function fitFontSize(text, maxWidthPx, fontFamily, minPx = 11, maxPx = 22){
-  // maxWidthPx 안에 들어가도록 최대 폰트 크기 찾기 (이분 탐색)
-  let lo = minPx;
-  let hi = maxPx;
-  let best = minPx;
+function measureTextWidth(text, fontPx, fontFamily){
+  _ctx.font = `800 ${fontPx}px ${fontFamily}`;
+  return _ctx.measureText(text).width;
+}
 
-  while(lo <= hi){
+/* maxWidth 안에 들어가는 최대 font-size 찾기 */
+function fitFontSize(text, maxWidthPx, fontFamily, minPx = 12, maxPx = 26){
+  let lo = minPx, hi = maxPx, best = minPx;
+  while (lo <= hi){
     const mid = (lo + hi) >> 1;
-    _ctx.font = `900 ${mid}px ${fontFamily}`;
-    const w = _ctx.measureText(text).width;
-
-    if(w <= maxWidthPx){
+    const w = measureTextWidth(text, mid, fontFamily);
+    if (w <= maxWidthPx){
       best = mid;
       lo = mid + 1;
-    }else{
+    } else {
       hi = mid - 1;
     }
   }
   return best;
 }
 
-/**
- * ✅ 핵심: 삼각형(섹터) 안 중앙에 배치
- * - 반경 r에서 섹터 폭(호 길이) 계산 → 그 폭에 맞게 폰트 자동 확대
- * - 왼쪽(180도 넘어가는) 섹터는 글자 뒤집히지 않게 180도 보정
- */
-function buildLabels(){
+/* 각도 -> 라디안 */
+function deg2rad(d){ return (d * Math.PI) / 180; }
+
+/* 섹터 path 생성 */
+function sectorPath(cx, cy, r, startDeg, endDeg){
+  const start = deg2rad(startDeg);
+  const end = deg2rad(endDeg);
+
+  const x1 = cx + r * Math.cos(start);
+  const y1 = cy + r * Math.sin(start);
+  const x2 = cx + r * Math.cos(end);
+  const y2 = cy + r * Math.sin(end);
+
+  const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+
+  // 중심 -> 시작점 -> arc -> 중심
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+}
+
+/* HSL 색상 자동 생성 */
+function sliceColor(i, n){
+  const hue = (i * (360 / n)) % 360;
+  return `hsl(${hue} 75% 45%)`;
+}
+
+/* ✅ SVG 룰렛 생성: 섹터 안 “중앙 삼각형 영역”에 텍스트 배치 */
+function buildWheelSVG(){
   const n = items.length;
   const sliceDeg = 360 / n;
 
-  wheel.innerHTML = "";
+  // wheel DOM 크기에 맞춰 viewBox 고정 (정확한 비율 유지)
+  const size = 500;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 240;
 
-  const rect = wheel.getBoundingClientRect();
-  const radius = Math.min(rect.width, rect.height) / 2;
+  // 텍스트를 섹터 중앙에 넣을 반경(삼각형 가운데 느낌)
+  const textR = r * 0.62; // 원하면 0.58(더 안쪽) / 0.68(더 바깥쪽)
 
-  // ✅ 삼각형 내부 중앙 느낌: 바깥쪽으로 너무 붙지 않게 0.64~0.72가 예쁨
-  const textRadius = radius * 0.68;
-
-  // 폰트 패밀리(스타일시트 body와 동일 계열)
+  // 텍스트 폰트
   const fontFamily =
     `"Noto Sans KR", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Apple SD Gothic Neo", "Malgun Gothic"`;
 
-  const frag = document.createDocumentFragment();
+  // wheel 내부 초기화
+  wheel.innerHTML = "";
+
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+  svg.setAttribute("aria-label", "룰렛");
+
+  // 살짝 유리 느낌 오버레이(중앙 하이라이트)
+  const defs = document.createElementNS(SVG_NS, "defs");
+
+  const radial = document.createElementNS(SVG_NS, "radialGradient");
+  radial.setAttribute("id", "glass");
+  radial.innerHTML = `
+    <stop offset="0%" stop-color="rgba(255,255,255,0.55)"/>
+    <stop offset="35%" stop-color="rgba(255,255,255,0.18)"/>
+    <stop offset="70%" stop-color="rgba(0,0,0,0.08)"/>
+    <stop offset="100%" stop-color="rgba(0,0,0,0.18)"/>
+  `;
+  defs.appendChild(radial);
+
+  svg.appendChild(defs);
 
   for(let i=0;i<n;i++){
-    const text = items[i];
+    const startDeg = i * sliceDeg - 90;          // -90: 12시 기준 시작
+    const endDeg = (i+1) * sliceDeg - 90;
+    const midDeg = (startDeg + endDeg) / 2;
 
-    // 섹터 중앙 각도
-    const angle = i * sliceDeg + sliceDeg / 2;
+    // 섹터
+    const p = document.createElementNS(SVG_NS, "path");
+    p.setAttribute("d", sectorPath(cx, cy, r, startDeg, endDeg));
+    p.setAttribute("fill", sliceColor(i, n));
+    p.setAttribute("opacity", "0.96");
+    svg.appendChild(p);
 
-    // 반경 textRadius에서의 섹터 폭(호 길이)
-    const arcLen = 2 * Math.PI * textRadius * (sliceDeg / 360);
-    const maxTextWidth = arcLen * 0.92; // 여유(양쪽 패딩 고려)
+    // 텍스트 위치(섹터 중앙 방향으로 textR만큼)
+    const mid = deg2rad(midDeg);
+    const tx = cx + textR * Math.cos(mid);
+    const ty = cy + textR * Math.sin(mid);
 
-    // 폰트 자동 확대(너무 크면 겹치니 상한선 둠)
-    const fontSize = fitFontSize(text, maxTextWidth, fontFamily, 11, 22);
+    // text가 들어갈 수 있는 최대 폭(해당 반경에서의 호 길이)
+    const arcLen = 2 * Math.PI * textR * (sliceDeg / 360);
+    const maxTextWidth = arcLen * 0.78; // 삼각형 안쪽이라 0.78 정도로 안전하게
 
-    const label = document.createElement("div");
-    label.className = "slice-label";
-    label.textContent = text;
-    label.style.width = `${Math.max(90, Math.floor(maxTextWidth))}px`;
-    label.style.fontSize = `${fontSize}px`;
+    // 글자 크기 자동 맞춤
+    const fs = fitFontSize(items[i], maxTextWidth, fontFamily, 12, 26);
 
-    // 90~270도 구간(왼쪽 반)은 글자가 뒤집혀 보이므로 180도 보정
-    const flip = angle > 90 && angle < 270 ? 180 : 0;
+    // ✅ 예시처럼 “섹터 방향으로 살짝 기울인” 텍스트
+    // 섹터 중앙선에 맞춰 회전 (읽기 좋게 좌측 반은 뒤집힘 방지)
+    let rot = midDeg + 90; // 라디얼 기준 텍스트가 섹터를 따라가게
+    const norm = ((rot % 360) + 360) % 360;
+    if (norm > 90 && norm < 270) rot += 180; // 뒤집힘 방지
 
-    // ✅ 변환 순서(오른쪽부터 적용):
-    // 1) translate(-50%,-50%)로 라벨 중심을 기준점으로
-    // 2) 왼쪽 반이면 180도 회전(글자 뒤집힘 방지)
-    // 3) 반경만큼 밖으로 이동(삼각형 내부 중앙)
-    // 4) 섹터 중앙 각도로 회전 배치
-    label.style.transform =
-      `rotate(${angle}deg) translate(${textRadius}px, 0) rotate(${flip}deg) translate(-50%, -50%)`;
+    const t = document.createElementNS(SVG_NS, "text");
+    t.setAttribute("x", tx);
+    t.setAttribute("y", ty);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("dominant-baseline", "middle");
+    t.setAttribute("font-family", fontFamily);
+    t.setAttribute("font-size", String(fs));
+    t.setAttribute("font-weight", "800");
+    t.setAttribute("fill", "rgba(255,255,255,0.96)");
+    t.setAttribute("stroke", "rgba(0,0,0,0.70)");
+    t.setAttribute("stroke-width", "2.2");
+    t.setAttribute("transform", `rotate(${rot} ${tx} ${ty})`);
+    t.textContent = items[i];
 
-    frag.appendChild(label);
+    svg.appendChild(t);
   }
 
-  wheel.appendChild(frag);
+  // 유리 오버레이(전체 원)
+  const glass = document.createElementNS(SVG_NS, "circle");
+  glass.setAttribute("cx", cx);
+  glass.setAttribute("cy", cy);
+  glass.setAttribute("r", r);
+  glass.setAttribute("fill", "url(#glass)");
+  glass.setAttribute("opacity", "0.75");
+  svg.appendChild(glass);
+
+  // 얇은 림
+  const rim = document.createElementNS(SVG_NS, "circle");
+  rim.setAttribute("cx", cx);
+  rim.setAttribute("cy", cy);
+  rim.setAttribute("r", r);
+  rim.setAttribute("fill", "none");
+  rim.setAttribute("stroke", "rgba(255,255,255,0.16)");
+  rim.setAttribute("stroke-width", "10");
+  svg.appendChild(rim);
+
+  wheel.appendChild(svg);
 }
 
 function init(){
-  injectLabelStyles();
-  wheel.style.background = buildWheelBackground(items.length);
-  wheel.style.position = "relative";
-
-  // 1차
-  buildLabels();
-
-  // 렌더 후 2차(크기 확정)
-  requestAnimationFrame(() => buildLabels());
-
-  // 리사이즈 대응
-  window.addEventListener("resize", () => buildLabels());
+  buildWheelSVG();
+  // 리사이즈에도 텍스트가 깔끔하게 유지되도록 재생성
+  window.addEventListener("resize", () => buildWheelSVG());
 }
 init();
 

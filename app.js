@@ -21,9 +21,9 @@ const resultText = document.getElementById("resultText");
 const menuList = document.getElementById("menuList");
 
 let isSpinning = false;
-let currentRotation = 0;
+let currentRotation = 0; // 누적 회전각(deg)
 
-// (보기용) 메뉴 리스트 표시
+/* 메뉴 리스트 표시 */
 items.forEach((t) => {
   const li = document.createElement("li");
   li.textContent = t;
@@ -31,7 +31,7 @@ items.forEach((t) => {
 });
 
 function buildWheelBackground(n){
-  // 색을 직접 지정하지 않고(요청 없었음), 기본 HSL로 자동 생성
+  // 색상은 자동 생성(HSL)
   const stops = [];
   for(let i=0;i<n;i++){
     const a0 = (i * 360) / n;
@@ -42,25 +42,7 @@ function buildWheelBackground(n){
   return `conic-gradient(${stops.join(",")})`;
 }
 
-function buildLabels(n){
-  // 라벨을 wheel 위에 올리기 (각 섹터 중앙에 배치)
-  wheel.innerHTML = ""; // clear
-  const frag = document.createDocumentFragment();
-
-  for(let i=0;i<n;i++){
-    const label = document.createElement("div");
-    label.className = "slice-label";
-    label.textContent = items[i];
-
-    const angle = (360 / n) * i + (360 / n) / 2; // 섹터 중앙
-    label.style.transform = `rotate(${angle}deg) translateY(-44%) rotate(90deg)`;
-    frag.appendChild(label);
-  }
-  wheel.appendChild(frag);
-}
-
 function injectLabelStyles(){
-  // 라벨 스타일을 JS에서 주입 (파일 늘리기 싫으면 여기서 처리)
   const style = document.createElement("style");
   style.textContent = `
     .slice-label{
@@ -68,19 +50,55 @@ function injectLabelStyles(){
       left:50%;
       top:50%;
       transform-origin: 0 0;
-      width: 44%;
-      text-align: left;
-      font-weight: 800;
-      font-size: 13px;
-      color: rgba(255,255,255,0.92);
-      text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+
+      /* ✅ 가독성 */
+      width: 58%;
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: -0.2px;
+      color: rgba(255,255,255,0.96);
+
+      /* ✅ 선명도(외곽선+그림자) */
+      -webkit-text-stroke: 0.8px rgba(0,0,0,0.55);
+      text-shadow:
+        0 2px 10px rgba(0,0,0,0.75),
+        0 1px 0 rgba(0,0,0,0.35);
+
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+
       pointer-events:none;
+      user-select:none;
+    }
+
+    @media (max-width: 520px){
+      .slice-label{
+        font-size: 13px;
+        width: 62%;
+      }
     }
   `;
   document.head.appendChild(style);
+}
+
+function buildLabels(n){
+  wheel.innerHTML = "";
+  const frag = document.createDocumentFragment();
+
+  for(let i=0;i<n;i++){
+    const label = document.createElement("div");
+    label.className = "slice-label";
+    label.textContent = items[i];
+
+    const angle = (360 / n) * i + (360 / n) / 2;
+
+    // ✅ 바깥쪽으로 배치해서 중앙 겹침 제거
+    label.style.transform = `rotate(${angle}deg) translateY(-72%) rotate(90deg)`;
+
+    frag.appendChild(label);
+  }
+  wheel.appendChild(frag);
 }
 
 function init(){
@@ -92,8 +110,18 @@ function init(){
 init();
 
 function pickWinnerIndex(){
-  // 균등 랜덤
   return Math.floor(Math.random() * items.length);
+}
+
+/* 최종 회전각에서 실제 포인터가 가리키는 인덱스 계산 */
+function calcIndexFromRotation(rotationDeg){
+  const n = items.length;
+  const slice = 360 / n;
+
+  const normalized = ((rotationDeg % 360) + 360) % 360; // 0~359
+  const pointerAngle = (360 - normalized) % 360;        // 포인터(12시)가 가리키는 wheel 각
+  const idx = Math.floor(pointerAngle / slice) % n;
+  return idx;
 }
 
 function spin(){
@@ -107,38 +135,39 @@ function spin(){
 
   const winnerIndex = pickWinnerIndex();
 
-  // 포인터는 "위(12시)"에 있고, wheel은 시계방향(+) 회전.
-  // 당첨 섹터의 중앙이 포인터에 오도록 목표 각도 계산:
-  // 섹터 i 중앙 각도는 (i*slice + slice/2). 이를 0deg(포인터)로 맞추려면 wheel을 -(중앙각)만큼 회전.
+  // 섹터 중앙을 포인터에 맞추는 기본 각도
   const targetToPointer = -(winnerIndex * slice + slice / 2);
 
-  // 보기 좋게 여러 바퀴 추가 + 약간 랜덤 오프셋(중앙 유지 범위 내)
-  const extraSpins = 6 + Math.floor(Math.random() * 3); // 6~8바퀴
-  const jitter = (Math.random() * (slice * 0.20)) - (slice * 0.10); // ±10% slice
-  const target = extraSpins * 360 + targetToPointer + jitter;
+  // ✅ 긴박감: 7~8바퀴 고속 회전
+  const fastSpins = 7 + Math.floor(Math.random() * 2);
+  const baseTarget = fastSpins * 360 + targetToPointer;
 
-  currentRotation += target;
+  // ✅ "핀에 걸림" 연출: 살짝 지나침 → 되돌아오기
+  const overshoot = slice * (0.18 + Math.random() * 0.08);  // 18~26% slice 지나침
+  const back = overshoot * (0.55 + Math.random() * 0.15);   // 55~70% 되돌림
 
-  wheel.style.transform = `rotate(${currentRotation}deg)`;
+  const toOvershoot = currentRotation + baseTarget + overshoot; // 지나친 지점
+  const toFinal = toOvershoot - back;                           // 되돌아온 최종 지점
 
-  const onDone = () => {
-    wheel.removeEventListener("transitionend", onDone);
+  // 1) 빠르게 회전
+  wheel.style.transition = "transform 3.35s cubic-bezier(.10,.85,.20,1)";
+  wheel.style.transform = `rotate(${toOvershoot}deg)`;
 
-    // 최종 각도로 실제 당첨 인덱스 다시 계산(정확도 보정)
-    const normalized = ((currentRotation % 360) + 360) % 360; // 0~359
-    // 포인터 기준에서 wheel이 rotated 된 만큼, 포인터가 가리키는 실제 섹터:
-    // 포인터는 0deg, wheel은 normalized 만큼 회전 -> wheel의 -normalized 지점이 포인터에 온다.
-    const pointerAngle = (360 - normalized) % 360;
-    const idx = Math.floor(pointerAngle / slice) % n;
+  // 2) 마지막을 느리게 + 되돌아오기(스냅 느낌)
+  setTimeout(() => {
+    wheel.style.transition = "transform 1.15s cubic-bezier(.18,.95,.25,1)";
+    wheel.style.transform = `rotate(${toFinal}deg)`;
+    currentRotation = toFinal;
 
-    const winner = items[idx];
-    resultText.textContent = winner;
+    // 3) 결과 표시
+    setTimeout(() => {
+      const idx = calcIndexFromRotation(currentRotation);
+      resultText.textContent = items[idx];
 
-    isSpinning = false;
-    spinBtn.disabled = false;
-  };
-
-  wheel.addEventListener("transitionend", onDone);
+      isSpinning = false;
+      spinBtn.disabled = false;
+    }, 1200);
+  }, 3360);
 }
 
 function reset(){
@@ -149,7 +178,7 @@ function reset(){
 spinBtn.addEventListener("click", spin);
 resetBtn.addEventListener("click", reset);
 
-// 스페이스/엔터로도 돌리기
+// Enter/Space로도 실행
 window.addEventListener("keydown", (e) => {
   if ((e.key === "Enter" || e.key === " ") && !isSpinning) {
     e.preventDefault();

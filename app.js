@@ -21,9 +21,9 @@ const resultText = document.getElementById("resultText");
 const menuList = document.getElementById("menuList");
 
 let isSpinning = false;
-let currentRotation = 0; // 누적 회전각(deg)
+let currentRotation = 0;
 
-/* 메뉴 리스트 표시 */
+/* 리스트 표시 */
 items.forEach((t) => {
   const li = document.createElement("li");
   li.textContent = t;
@@ -31,7 +31,6 @@ items.forEach((t) => {
 });
 
 function buildWheelBackground(n){
-  // 색상은 자동 생성(HSL)
   const stops = [];
   for(let i=0;i<n;i++){
     const a0 = (i * 360) / n;
@@ -50,41 +49,45 @@ function injectLabelStyles(){
       left:50%;
       top:50%;
       transform-origin: 0 0;
+      pointer-events:none;
+      user-select:none;
 
-      /* ✅ 가독성 */
-      width: 58%;
+      /* ✅ 아우터 링 형태로 선명하게 */
+      width: 62%;
       font-weight: 900;
-      font-size: 14px;
-      letter-spacing: -0.2px;
-      color: rgba(255,255,255,0.96);
+      font-size: 16px;
+      letter-spacing: -0.25px;
+      color: rgba(255,255,255,0.98);
 
-      /* ✅ 선명도(외곽선+그림자) */
-      -webkit-text-stroke: 0.8px rgba(0,0,0,0.55);
+      -webkit-text-stroke: 1px rgba(0,0,0,0.62);
       text-shadow:
-        0 2px 10px rgba(0,0,0,0.75),
+        0 2px 12px rgba(0,0,0,0.78),
         0 1px 0 rgba(0,0,0,0.35);
 
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-
-      pointer-events:none;
-      user-select:none;
     }
 
     @media (max-width: 520px){
       .slice-label{
-        font-size: 13px;
-        width: 62%;
+        font-size: 14px;
+        width: 66%;
+        -webkit-text-stroke: 0.9px rgba(0,0,0,0.62);
       }
     }
   `;
   document.head.appendChild(style);
 }
 
+/* ✅ 라벨을 중앙이 아니라 "바깥쪽 링"에 배치 */
 function buildLabels(n){
   wheel.innerHTML = "";
   const frag = document.createDocumentFragment();
+
+  // translateY(-R%) : 값이 클수록 바깥으로 감
+  // ✅ 82% 정도면 거의 바깥쪽에 붙어서 확실히 보임
+  const outward = -82;
 
   for(let i=0;i<n;i++){
     const label = document.createElement("div");
@@ -93,8 +96,9 @@ function buildLabels(n){
 
     const angle = (360 / n) * i + (360 / n) / 2;
 
-    // ✅ 바깥쪽으로 배치해서 중앙 겹침 제거
-    label.style.transform = `rotate(${angle}deg) translateY(-72%) rotate(90deg)`;
+    // ✅ 방향: 바깥으로 이동 → 텍스트는 살짝 안쪽을 바라보게
+    // rotate(angle)로 위치 잡고, 바깥으로 보내고, 다시 -angle을 일부 보정하면 더 자연스러움
+    label.style.transform = `rotate(${angle}deg) translateY(${outward}%) rotate(${90}deg)`;
 
     frag.appendChild(label);
   }
@@ -113,15 +117,13 @@ function pickWinnerIndex(){
   return Math.floor(Math.random() * items.length);
 }
 
-/* 최종 회전각에서 실제 포인터가 가리키는 인덱스 계산 */
 function calcIndexFromRotation(rotationDeg){
   const n = items.length;
   const slice = 360 / n;
 
-  const normalized = ((rotationDeg % 360) + 360) % 360; // 0~359
-  const pointerAngle = (360 - normalized) % 360;        // 포인터(12시)가 가리키는 wheel 각
-  const idx = Math.floor(pointerAngle / slice) % n;
-  return idx;
+  const normalized = ((rotationDeg % 360) + 360) % 360;
+  const pointerAngle = (360 - normalized) % 360;
+  return Math.floor(pointerAngle / slice) % n;
 }
 
 function spin(){
@@ -135,27 +137,27 @@ function spin(){
 
   const winnerIndex = pickWinnerIndex();
 
-  // 섹터 중앙을 포인터에 맞추는 기본 각도
+  // 섹터 중앙을 포인터에 맞추는 각도
   const targetToPointer = -(winnerIndex * slice + slice / 2);
 
-  // ✅ 긴박감: 7~8바퀴 고속 회전
+  // ✅ 고속 여러 바퀴
   const fastSpins = 7 + Math.floor(Math.random() * 2);
   const baseTarget = fastSpins * 360 + targetToPointer;
 
-  // ✅ "핀에 걸림" 연출: 살짝 지나침 → 되돌아오기
-  const overshoot = slice * (0.18 + Math.random() * 0.08);  // 18~26% slice 지나침
-  const back = overshoot * (0.55 + Math.random() * 0.15);   // 55~70% 되돌림
+  // ✅ 핀에 걸려 살짝 되돌아오는 느낌
+  const overshoot = slice * (0.20 + Math.random() * 0.10); // 20~30%
+  const back = overshoot * (0.60 + Math.random() * 0.15);  // 60~75%
 
-  const toOvershoot = currentRotation + baseTarget + overshoot; // 지나친 지점
-  const toFinal = toOvershoot - back;                           // 되돌아온 최종 지점
+  const toOvershoot = currentRotation + baseTarget + overshoot;
+  const toFinal = toOvershoot - back;
 
   // 1) 빠르게 회전
   wheel.style.transition = "transform 3.35s cubic-bezier(.10,.85,.20,1)";
   wheel.style.transform = `rotate(${toOvershoot}deg)`;
 
-  // 2) 마지막을 느리게 + 되돌아오기(스냅 느낌)
+  // 2) 마지막 느리게 + 되돌림
   setTimeout(() => {
-    wheel.style.transition = "transform 1.15s cubic-bezier(.18,.95,.25,1)";
+    wheel.style.transition = "transform 1.20s cubic-bezier(.18,.95,.25,1)";
     wheel.style.transform = `rotate(${toFinal}deg)`;
     currentRotation = toFinal;
 
@@ -166,7 +168,7 @@ function spin(){
 
       isSpinning = false;
       spinBtn.disabled = false;
-    }, 1200);
+    }, 1250);
   }, 3360);
 }
 
@@ -178,7 +180,6 @@ function reset(){
 spinBtn.addEventListener("click", spin);
 resetBtn.addEventListener("click", reset);
 
-// Enter/Space로도 실행
 window.addEventListener("keydown", (e) => {
   if ((e.key === "Enter" || e.key === " ") && !isSpinning) {
     e.preventDefault();

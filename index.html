@@ -1,78 +1,47 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-
-  <!-- ✅ 모바일 텍스트 클릭 확대/더블탭 줌 방지 -->
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
-  />
-
-  <title>🐧 Ice Cube Draw</title>
-  <link rel="stylesheet" href="style.css?v=final5" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>점심 룰렛</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="wrap">
+    <header class="header">
+      <h1>점심 룰렛 🎯</h1>
+      <p class="sub">버튼 한 번 누르면 자동으로 돌아가서 당첨이 확정됩니다.</p>
+    </header>
 
-    <!-- SETUP -->
-    <section id="setup" class="card">
-      <h1 class="h1">🐧 Ice Cube Draw</h1>
-      <p class="sub">얼음이 <b>3단계</b> 누적되면 당첨! (중반부터 2연속 파손도 발생)</p>
+    <section class="stage">
+      <div class="pointer" aria-hidden="true"></div>
 
-      <div class="row">
-        <label class="label">
-          선택지 개수
-          <input id="count" class="input" type="number" min="2" max="12" value="6" />
-        </label>
-
-        <button id="apply" class="btn">개수 적용</button>
-        <button id="start" class="btn primary">START</button>
-      </div>
-
-      <div class="namesBox">
-        <div class="namesHeader">
-          <div class="namesTitle">선택지 이름</div>
-          <div class="namesHint">빈칸은 자동으로 “선택지 n”</div>
-        </div>
-        <div id="names" class="namesGrid"></div>
+      <div class="wheel-area">
+        <div id="wheel" class="wheel" aria-label="룰렛"></div>
+        <div class="hub" aria-hidden="true"></div>
       </div>
     </section>
 
-    <!-- GAME -->
-    <section id="game" class="game" hidden>
-      <div class="topBar">
-        <button id="back" class="btn small">← 설정</button>
-        <div id="status" class="status">대기 중…</div>
-        <button id="restart" class="btn small primary">다시</button>
+    <section class="panel">
+      <button id="spinBtn" class="btn">룰렛 돌리기</button>
+      <button id="resetBtn" class="btn ghost" title="당첨표시만 초기화">초기화</button>
+
+      <div class="result">
+        <div class="label">당첨</div>
+        <div id="resultText" class="value">-</div>
       </div>
 
-      <div class="stage">
-        <div id="grid" class="grid"></div>
-
-        <!-- Penguin -->
-        <div id="penguin" class="penguin" aria-hidden="true">
-          <div class="p-body">🐧</div>
-          <div class="p-hammer">🔨</div>
-        </div>
-
-        <!-- RESULT -->
-        <div id="result" class="result" hidden>
-          <div class="resultCard" role="dialog" aria-modal="true">
-            <div class="resultLabel">RESULT</div>
-            <div id="winner" class="winner">-</div>
-            <div class="resultBtns">
-              <button id="again" class="btn primary">다시 뽑기</button>
-              <button id="toSetup" class="btn">처음부터</button>
-            </div>
-            <div class="resultHint">처음부터를 누르면 선택지 입력 화면으로 돌아가요.</div>
-          </div>
-        </div>
-      </div>
+      <details class="list">
+        <summary>메뉴 리스트 보기</summary>
+        <ul id="menuList"></ul>
+      </details>
     </section>
 
+    <footer class="footer">
+      <small>GitHub Pages용 (HTML/CSS/JS)</small>
+    </footer>
   </main>
 
-  <script src="script.js?v=final5"></script>
+  <script src="app.js"></script>
 </body>
 </html>

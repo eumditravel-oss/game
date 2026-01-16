@@ -41,7 +41,7 @@ function measureTextWidth(text, fontPx, fontFamily){
   return _ctx.measureText(text).width;
 }
 
-function fitFontSize(text, maxWidthPx, fontFamily, minPx = 12, maxPx = 26){
+function fitFontSize(text, maxWidthPx, fontFamily, minPx = 14, maxPx = 32){
   let lo = minPx, hi = maxPx, best = minPx;
   while (lo <= hi){
     const mid = (lo + hi) >> 1;
@@ -79,7 +79,8 @@ function sliceColor(i, n){
 
 /**
  * ✅ SVG 룰렛 생성
- * ✅ 텍스트 방향: "중심 -> 바깥(반지름 방향)" = 화살표 방향
+ * ✅ 텍스트 방향: 중심 -> 바깥(반지름 방향)
+ * ✅ 글씨 크기 키움(폭/최대폰트/외곽선 강화)
  */
 function buildWheelSVG(){
   const n = items.length;
@@ -90,8 +91,8 @@ function buildWheelSVG(){
   const cy = size / 2;
   const r = 240;
 
-  // 텍스트 위치 반경(삼각형 안쪽)
-  const textR = r * 0.62;
+  // 텍스트 위치 반경(조금 더 바깥쪽)
+  const textR = r * 0.66;
 
   const fontFamily =
     `"Noto Sans KR", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Apple SD Gothic Neo", "Malgun Gothic"`;
@@ -134,15 +135,16 @@ function buildWheelSVG(){
 
     // 해당 반경에서 섹터 폭(호 길이)
     const arcLen = 2 * Math.PI * textR * (sliceDeg / 360);
-    const maxTextWidth = arcLen * 0.78;
+    const maxTextWidth = arcLen * 0.90; // ✅ 기존 0.78 -> 0.90
 
-    const fs = fitFontSize(items[i], maxTextWidth, fontFamily, 12, 26);
+    // ✅ 최소 14, 최대 32로 키움
+    const fs = fitFontSize(items[i], maxTextWidth, fontFamily, 14, 32);
 
-    // ✅ 핵심 변경: 반지름 방향 회전 = midDeg
-    // 가독성 위해 뒤집히는 구간은 180도 보정(읽기 좋게)
+    // 반지름 방향 회전 = midDeg
+    // 뒤집히는 구간은 180도 보정(읽기 좋게)
     let rot = midDeg;
     const norm = ((rot % 360) + 360) % 360;
-    if (norm > 90 && norm < 270) rot -= 180; // 왼쪽 반은 뒤집힘 방지(방향은 반지름 유지)
+    if (norm > 90 && norm < 270) rot -= 180;
 
     const t = document.createElementNS(SVG_NS, "text");
     t.setAttribute("x", tx);
@@ -154,7 +156,7 @@ function buildWheelSVG(){
     t.setAttribute("font-weight", "800");
     t.setAttribute("fill", "rgba(255,255,255,0.96)");
     t.setAttribute("stroke", "rgba(0,0,0,0.70)");
-    t.setAttribute("stroke-width", "2.2");
+    t.setAttribute("stroke-width", "3"); // ✅ 외곽선 강화(2.2 -> 3)
     t.setAttribute("transform", `rotate(${rot} ${tx} ${ty})`);
     t.textContent = items[i];
 

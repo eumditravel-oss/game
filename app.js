@@ -23,7 +23,7 @@ const menuList = document.getElementById("menuList");
 let isSpinning = false;
 let currentRotation = 0;
 
-/* 리스트 표시 */
+/* 메뉴 리스트 표시 */
 items.forEach((t) => {
   const li = document.createElement("li");
   li.textContent = t;
@@ -52,10 +52,10 @@ function injectLabelStyles(){
       pointer-events:none;
       user-select:none;
 
-      /* ✅ 아우터 링 형태로 선명하게 */
-      width: 62%;
+      /* ✅ 가독성 */
+      width: 200px;               /* 길이 제한(긴 글자 줄임표) */
       font-weight: 900;
-      font-size: 16px;
+      font-size: 15px;
       letter-spacing: -0.25px;
       color: rgba(255,255,255,0.98);
 
@@ -71,8 +71,8 @@ function injectLabelStyles(){
 
     @media (max-width: 520px){
       .slice-label{
-        font-size: 14px;
-        width: 66%;
+        font-size: 13px;
+        width: 180px;
         -webkit-text-stroke: 0.9px rgba(0,0,0,0.62);
       }
     }
@@ -80,14 +80,21 @@ function injectLabelStyles(){
   document.head.appendChild(style);
 }
 
-/* ✅ 라벨을 중앙이 아니라 "바깥쪽 링"에 배치 */
+/**
+ * ✅ 핵심: %가 아니라 "px 반경"으로 정확히 원형 배치
+ * - wheel 크기가 바뀌어도(모바일/리사이즈) 자동으로 정상 위치
+ */
 function buildLabels(n){
   wheel.innerHTML = "";
   const frag = document.createDocumentFragment();
 
-  // translateY(-R%) : 값이 클수록 바깥으로 감
-  // ✅ 82% 정도면 거의 바깥쪽에 붙어서 확실히 보임
-  const outward = -82;
+  const rect = wheel.getBoundingClientRect();
+  const radius = Math.min(rect.width, rect.height) / 2;
+
+  // 테두리(10px) + 내부 글로우/링 + 안전여백 고려
+  // 숫자만 조절하면 글씨 위치를 쉽게 튜닝 가능
+  const rimPadding = 52;             // ✅ 글씨가 너무 바깥이면 ↑, 너무 안쪽이면 ↓
+  const textRadius = Math.max(10, radius - rimPadding);
 
   for(let i=0;i<n;i++){
     const label = document.createElement("div");
@@ -96,12 +103,13 @@ function buildLabels(n){
 
     const angle = (360 / n) * i + (360 / n) / 2;
 
-    // ✅ 방향: 바깥으로 이동 → 텍스트는 살짝 안쪽을 바라보게
-    // rotate(angle)로 위치 잡고, 바깥으로 보내고, 다시 -angle을 일부 보정하면 더 자연스러움
-    label.style.transform = `rotate(${angle}deg) translateY(${outward}%) rotate(${90}deg)`;
+    // 중심에서 angle 방향으로 textRadius(px) 이동
+    // 마지막 rotate(90deg)는 글자가 섹터 방향으로 자연스럽게 보이도록 보정
+    label.style.transform = `rotate(${angle}deg) translateX(${textRadius}px) rotate(90deg)`;
 
     frag.appendChild(label);
   }
+
   wheel.appendChild(frag);
 }
 
@@ -109,7 +117,15 @@ function init(){
   injectLabelStyles();
   wheel.style.background = buildWheelBackground(items.length);
   wheel.style.position = "relative";
+
+  // 1차 배치(초기)
   buildLabels(items.length);
+
+  // ✅ 렌더 완료 후 2차 배치(정확한 rect 확보)
+  requestAnimationFrame(() => buildLabels(items.length));
+
+  // ✅ 창 크기 바뀌면 다시 정렬
+  window.addEventListener("resize", () => buildLabels(items.length));
 }
 init();
 
@@ -137,14 +153,14 @@ function spin(){
 
   const winnerIndex = pickWinnerIndex();
 
-  // 섹터 중앙을 포인터에 맞추는 각도
+  // 섹터 중앙이 포인터에 오도록 목표각
   const targetToPointer = -(winnerIndex * slice + slice / 2);
 
-  // ✅ 고속 여러 바퀴
+  // 긴박감: 고속 회전(7~8바퀴)
   const fastSpins = 7 + Math.floor(Math.random() * 2);
   const baseTarget = fastSpins * 360 + targetToPointer;
 
-  // ✅ 핀에 걸려 살짝 되돌아오는 느낌
+  // 핀에 걸리는 느낌: 살짝 지나쳤다가 되돌아오기
   const overshoot = slice * (0.20 + Math.random() * 0.10); // 20~30%
   const back = overshoot * (0.60 + Math.random() * 0.15);  // 60~75%
 

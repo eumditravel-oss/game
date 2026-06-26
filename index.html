@@ -1,47 +1,576 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>점심 룰렛</title>
-  <link rel="stylesheet" href="./styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고퀄리티 우당탕탕 레이스</title>
+    <!-- 깔끔한 웹 폰트 (Pretendard) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <!-- 폭죽 이펙트 라이브러리 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: #0f172a; color: white;
+            font-family: 'Pretendard', sans-serif;
+            user-select: none;
+        }
+        
+        /* UI 오버레이 */
+        #ui-layer {
+            position: absolute; inset: 0;
+            background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 100; transition: opacity 0.5s;
+        }
+        .panel {
+            background: rgba(30, 41, 59, 0.9); padding: 50px 60px;
+            border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); text-align: center;
+            width: 100%; max-width: 600px; box-sizing: border-box;
+        }
+        .panel h1 { margin-top: 0; font-size: 38px; color: #60a5fa; text-shadow: 0 0 15px rgba(96, 165, 250, 0.5); }
+        .panel p { color: #94a3b8; font-size: 18px; margin-bottom: 30px; line-height: 1.5; }
+        
+        input {
+            width: 100%; padding: 18px 24px; font-size: 18px;
+            background: #1e293b; color: white; border: 2px solid #334155;
+            border-radius: 12px; font-family: 'Pretendard', sans-serif;
+            outline: none; transition: border 0.3s; box-sizing: border-box;
+            margin-bottom: 20px; text-align: center;
+        }
+        input:focus { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+        
+        button {
+            padding: 18px 40px; font-size: 20px; font-weight: 900;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white;
+            border: none; border-radius: 12px; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s; font-family: 'Pretendard', sans-serif;
+            width: 100%; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+        button:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(59, 130, 246, 0.5); }
+
+        /* 실시간 이벤트 토스트 알림 */
+        #toast-container {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; gap: 12px; z-index: 50; pointer-events: none;
+        }
+        .toast {
+            padding: 14px 28px; border-radius: 50px; font-weight: 800; font-size: 18px;
+            animation: slideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .toast.boost { background: rgba(239, 68, 68, 0.95); border: 2px solid #fca5a5; }
+        .toast.banana { background: rgba(234, 179, 8, 0.95); border: 2px solid #fef08a; }
+        .toast.stun { background: rgba(168, 85, 247, 0.95); border: 2px solid #e9d5ff; }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* 출발 카운트다운 */
+        #countdown {
+            display: none; position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); font-size: 150px; font-weight: 900;
+            color: white; text-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            z-index: 80; pointer-events: none;
+        }
+        @keyframes pop {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            30% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+            80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+        }
+
+        /* 우측 상단 실시간 랭킹 */
+        #leaderboard {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(8px);
+            padding: 20px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none; z-index: 40; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+        .lb-title { font-size: 14px; color: #94a3b8; margin-bottom: 12px; font-weight: bold; }
+        .lb-item { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; font-size: 18px; font-weight: bold; }
+        .lb-item:last-child { margin-bottom: 0; }
+        .rank-badge {
+            width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; font-size: 14px; background: #334155; color: white;
+        }
+        .rank-1 { background: #eab308; color: black; box-shadow: 0 0 10px rgba(234, 179, 8, 0.5); }
+        .rank-2 { background: #94a3b8; color: black; }
+        .rank-3 { background: #b45309; color: white; }
+
+        canvas { display: block; }
+    </style>
 </head>
 <body>
-  <main class="wrap">
-    <header class="header">
-      <h1>점심 룰렛 🎯</h1>
-      <p class="sub">버튼 한 번 누르면 자동으로 돌아가서 당첨이 확정됩니다.</p>
-    </header>
 
-    <section class="stage">
-      <div class="pointer" aria-hidden="true"></div>
+    <!-- UI 오버레이 -->
+    <div id="ui-layer">
+        <!-- 시작 화면 -->
+        <div id="start-panel" class="panel">
+            <h1>🏎️ 익스트림 아이템 레이스</h1>
+            <p>1등은 벼락을 맞고 꼴찌는 부스터를 타는 대환장 밸런스!<br>메뉴나 사람 이름을 쉼표(,)로 구분해 입력하세요.</p>
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <input type="text" id="participants" value="김팀장, 박대리, 이사원, 최인턴, 돈까스, 제육볶음" placeholder="예: 돈까스, 제육볶음, 짜장면">
+                <button onclick="startRace()">🚀 레이스 출발!</button>
+            </div>
+        </div>
+        
+        <!-- 결과 화면 -->
+        <div id="winner-panel" class="panel" style="display:none;">
+            <h2 style="color:#facc15; font-size:28px; margin-top:0;">🏆 영광의 1위 (당첨) 🏆</h2>
+            <div id="winner-name" style="font-size: 72px; font-weight: 900; margin: 30px 0; color: white; text-shadow: 0 0 30px rgba(255,255,255,0.6);">이름</div>
+            <button onclick="resetGame()">다시 하기</button>
+        </div>
+    </div>
 
-      <div class="wheel-area">
-        <div id="wheel" class="wheel" aria-label="룰렛"></div>
-        <div class="hub" aria-hidden="true"></div>
-      </div>
-    </section>
+    <!-- 인게임 UI -->
+    <div id="countdown"></div>
+    <div id="toast-container"></div>
+    <div id="leaderboard">
+        <div class="lb-title">실시간 선두 그룹</div>
+        <div id="lb-content"></div>
+    </div>
 
-    <section class="panel">
-      <button id="spinBtn" class="btn">룰렛 돌리기</button>
-      <button id="resetBtn" class="btn ghost" title="당첨표시만 초기화">초기화</button>
+    <!-- 고해상도 게임 렌더링 캔버스 -->
+    <canvas id="gameCanvas"></canvas>
 
-      <div class="result">
-        <div class="label">당첨</div>
-        <div id="resultText" class="value">-</div>
-      </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // 고해상도(레티나) 디스플레이 그래픽 깨짐 방지 보정
+        let dpr = window.devicePixelRatio || 1;
+        let canvasWidth, canvasHeight;
 
-      <details class="list">
-        <summary>메뉴 리스트 보기</summary>
-        <ul id="menuList"></ul>
-      </details>
-    </section>
+        function resize() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            canvas.style.width = canvasWidth + 'px';
+            canvas.style.height = canvasHeight + 'px';
+        }
+        window.addEventListener('resize', resize);
+        resize();
 
-    <footer class="footer">
-      <small>GitHub Pages용 (HTML/CSS/JS)</small>
-    </footer>
-  </main>
+        // 게임 핵심 변수 설정
+        const FINISH_LINE_X = 8000;
+        let isGameRunning = false;
+        let isRacing = false;
+        let racers = [];
+        let particles = [];
+        let cameraX = -100;
+        let animationId;
+        let lastTime = 0;
+        let flashAlpha = 0;
+        let screenShake = 0;
+        let winner = null;
 
-  <script src="./app.js"></script>
+        const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#f43f5e', '#64748b'];
+        const emojis = ['🐶','🐱','🦊','🐻','🐼','🐯','🦁','🐸','🐵','🦄', '🚀', '🏎️', '🦖', '🦈', '👻'];
+
+        // 파티클 (흙먼지, 부스터 불꽃 이펙트)
+        class Particle {
+            constructor(x, y, vx, vy, color, life, size) {
+                this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+                this.color = color; this.life = life; this.maxLife = life; this.size = size;
+            }
+            update(multiplier) {
+                this.x += this.vx * multiplier;
+                this.y += this.vy * multiplier;
+                this.life -= multiplier;
+                this.size *= 0.96;
+            }
+            draw(ctx, camX) {
+                ctx.globalAlpha = Math.max(0, this.life / this.maxLife);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x - camX, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // 레이서 (캐릭터) 객체
+        class Racer {
+            constructor(name, index, totalLanes, color, emoji) {
+                this.name = name; this.index = index; this.color = color; this.emoji = emoji;
+                this.x = 0;
+                
+                // 화면 중앙에 맞게 레인 분배
+                const availableHeight = canvasHeight * 0.7;
+                const startY = canvasHeight * 0.15;
+                const laneHeight = availableHeight / totalLanes;
+                this.y = startY + (index * laneHeight) + laneHeight / 2;
+                
+                this.baseSpeed = 4.5 + Math.random() * 1.5; 
+                this.speed = 0;
+                this.state = 'normal'; // 상태이상: normal, boost, banana, stun
+                this.stateTimer = 0;
+                this.angle = 0;
+                this.finished = false;
+            }
+
+            update(multiplier, leaderX, timestamp) {
+                if (this.stateTimer > 0) {
+                    this.stateTimer -= multiplier;
+                    if (this.stateTimer <= 0) {
+                        this.state = 'normal'; this.angle = 0;
+                    }
+                }
+
+                // 경기가 끝났거나 골인한 경우 브레이크
+                if (this.finished || !isRacing) {
+                    this.speed *= 0.95; 
+                    if (this.speed < 0.1) this.speed = 0;
+                } 
+                else if (this.state === 'boost') {
+                    this.speed = 18; // 부스터 시 엄청난 스피드
+                    for(let i=0; i<2; i++) {
+                        particles.push(new Particle(
+                            this.x - 40, this.y, 
+                            -Math.random() * 6 - 3, (Math.random() - 0.5) * 4,
+                            Math.random() > 0.5 ? '#f87171' : '#fbbf24', 20 + Math.random() * 10, 4 + Math.random() * 5
+                        ));
+                    }
+                } 
+                else if (this.state === 'banana') {
+                    this.speed = 0;
+                    this.angle += 0.3 * multiplier; // 밟으면 빙글빙글 돎
+                } 
+                else if (this.state === 'stun') {
+                    this.speed = 0;
+                    this.angle = (Math.random() - 0.5) * 0.5; // 번개 맞으면 바들바들 떨림
+                } 
+                else {
+                    // 고무줄 알고리즘: 뒤쳐질수록 보정 속도를 받아 치열한 접전 유도 (가장 중요한 예능 요소)
+                    let dist = leaderX - this.x;
+                    let catchUp = dist > 300 ? (dist * 0.002) : 0;
+                    
+                    // 사람처럼 불규칙하게 달리도록 사인파(Sine wave) 적용
+                    this.speed = this.baseSpeed + catchUp + Math.sin(timestamp / 300 + this.index) * 1.5;
+                    
+                    if (Math.random() < 0.2) {
+                        particles.push(new Particle(
+                            this.x - 30, this.y + 15, -Math.random() * 2, -Math.random() * 2,
+                            'rgba(255, 255, 255, 0.4)', 15, 2 + Math.random() * 3
+                        ));
+                    }
+                }
+
+                this.x += this.speed * multiplier;
+
+                // 1등 골인 판정
+                if (this.x >= FINISH_LINE_X && !winner && !this.finished) {
+                    this.finished = true;
+                    winner = this;
+                    isRacing = false;
+                    setTimeout(() => endRace(this), 1500); // 통과 후 1.5초 뒤 결과창 띄움
+                }
+            }
+
+            draw(ctx, camX) {
+                ctx.save();
+                ctx.translate(this.x - camX, this.y);
+                ctx.rotate(this.angle);
+                
+                // 캐릭터 그림자
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 6;
+                
+                // 몸통 (캡슐 모양)
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.roundRect(-45, -22, 120, 44, 22);
+                ctx.fill();
+                
+                ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+                
+                // 이모지
+                ctx.font = '26px Arial';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.emoji, -35, 2);
+                
+                // 이름 텍스트
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 18px Pretendard, sans-serif';
+                let shortName = this.name.length > 4 ? this.name.substring(0,4) + '..' : this.name;
+                ctx.fillText(shortName, 5, 2);
+                
+                // 상태 아이콘
+                if (this.state === 'boost') ctx.fillText('🚀', 85, 2);
+                if (this.state === 'banana') ctx.fillText('🍌', 85, 2);
+                if (this.state === 'stun') ctx.fillText('⚡', 85, 2);
+                
+                ctx.restore();
+            }
+        }
+
+        // 마리오카트식 아이템 이벤트 시스템 (대역전극 메이커)
+        function triggerEvents(racers, leader) {
+            if (Math.random() < 0.015) { // 무작위 이벤트 발생
+                let rand = Math.random();
+                let sorted = [...racers].sort((a, b) => b.x - a.x);
+                
+                if (rand < 0.25) {
+                    // 25% 확률: 1등에게 번개 적중! (골인 직전 제외)
+                    if (leader && leader.state === 'normal' && leader.x > 500 && leader.x < FINISH_LINE_X - 1000) {
+                        leader.state = 'stun';
+                        leader.stateTimer = 90; // 약 1.5초 기절
+                        showToast(`⚡ 앗! 1등 [${leader.name}] 벼락 적중!`, 'stun');
+                        flashAlpha = 1; // 화면 전체 번쩍임
+                        screenShake = 25; // 찰진 카메라 흔들림 타격감
+                    }
+                } else if (rand < 0.6) {
+                    // 35% 확률: 중간 순위에게 바나나 함정
+                    let targets = sorted.slice(1, sorted.length - 1).filter(r => r.state === 'normal');
+                    if (targets.length > 0) {
+                        let target = targets[Math.floor(Math.random() * targets.length)];
+                        target.state = 'banana'; target.stateTimer = 70;
+                        showToast(`🍌 [${target.name}] 바나나 밟고 미끄러짐!`, 'banana');
+                    }
+                } else {
+                    // 40% 확률: 뒤쳐진 하위권에게 로켓 부스터 지원
+                    let targets = sorted.slice(Math.floor(sorted.length / 2)).filter(r => r.state === 'normal');
+                    if (targets.length > 0) {
+                        let target = targets[Math.floor(Math.random() * targets.length)];
+                        target.state = 'boost'; target.stateTimer = 70;
+                        showToast(`🚀 [${target.name}] 분노의 역전 로켓!!`, 'boost');
+                    }
+                }
+            }
+        }
+
+        function showToast(msg, type) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerText = msg;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-20px)';
+                toast.style.transition = 'all 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 2000);
+        }
+
+        // 물리 엔진 업데이트
+        function updatePhysics(multiplier, timestamp) {
+            let sorted = [...racers].sort((a, b) => b.x - a.x);
+            let leader = sorted[0];
+
+            // 카메라가 1등을 화면의 30% 지점에 위치하도록 부드럽게(Lerp) 따라감
+            let targetCameraX = leader.x - canvasWidth * 0.3;
+            if (targetCameraX < -100) targetCameraX = -100;
+            cameraX += (targetCameraX - cameraX) * 0.1 * multiplier;
+
+            if (screenShake > 0) {
+                screenShake *= 0.9;
+                if (screenShake < 0.5) screenShake = 0;
+            }
+            if (flashAlpha > 0) {
+                flashAlpha -= 0.05 * multiplier;
+            }
+
+            if (isRacing) {
+                triggerEvents(racers, leader);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(multiplier);
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            racers.forEach(r => {
+                r.update(multiplier, leader.x, timestamp);
+            });
+        }
+
+        // 그래픽 렌더링
+        function render() {
+            ctx.save();
+            ctx.scale(dpr, dpr);
+            
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            // 카메라 및 화면 흔들림 적용
+            ctx.save();
+            if (screenShake > 0) {
+                ctx.translate((Math.random() - 0.5) * screenShake, (Math.random() - 0.5) * screenShake);
+            }
+
+            // 트랙 가이드라인 점선
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([20, 20]);
+            let availableHeight = canvasHeight * 0.7;
+            let startY = canvasHeight * 0.15;
+            let laneHeight = availableHeight / racers.length;
+            for (let i = 0; i <= racers.length; i++) {
+                ctx.beginPath();
+                let yPos = startY + (i * laneHeight);
+                ctx.moveTo(-cameraX % 40, yPos);
+                ctx.lineTo(canvasWidth, yPos);
+                ctx.stroke();
+            }
+            ctx.setLineDash([]);
+
+            // 출발선 렌더링
+            let startLineX = 0 - cameraX;
+            if (startLineX > -50 && startLineX < canvasWidth + 50) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillRect(startLineX, 0, 10, canvasHeight);
+            }
+
+            // 결승선(체커보드) 렌더링
+            let flX = FINISH_LINE_X - cameraX;
+            if (flX > -100 && flX < canvasWidth + 100) {
+                for (let i = 0; i < canvasHeight / 25; i++) {
+                    ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#000000';
+                    ctx.fillRect(flX, i * 25, 25, 25);
+                    ctx.fillStyle = i % 2 === 0 ? '#000000' : '#ffffff';
+                    ctx.fillRect(flX + 25, i * 25, 25, 25);
+                }
+            }
+
+            particles.forEach(p => p.draw(ctx, cameraX));
+
+            // 레이서 (뒤에 있는 사람이 밑에 깔리도록 역순으로 그림)
+            let sorted = [...racers].sort((a, b) => a.x - b.x);
+            sorted.forEach(r => r.draw(ctx, cameraX));
+
+            ctx.restore(); // 카메라 변환 복구
+
+            // 벼락 플래시 이펙트
+            if (flashAlpha > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            }
+
+            // 실시간 리더보드 UI 업데이트
+            let leaderSorted = [...racers].sort((a, b) => b.x - a.x);
+            let lbHtml = '';
+            leaderSorted.slice(0, 3).forEach((r, i) => {
+                lbHtml += `<div class="lb-item">
+                            <div class="rank-badge rank-${i+1}">${i+1}</div>
+                            <span>${r.emoji} ${r.name}</span>
+                           </div>`;
+            });
+            document.getElementById('lb-content').innerHTML = lbHtml;
+
+            ctx.restore(); // 스케일 복구
+        }
+
+        // 144Hz, 60Hz 등 모든 모니터 환경에서 똑같이 부드러운 게임 루프 (Delta Time 적용)
+        function gameLoop(timestamp) {
+            if (!isGameRunning) return;
+            
+            let dt = timestamp - lastTime;
+            lastTime = timestamp;
+            if (dt > 100) dt = 16; // 탭 이동 시 워프 버그 방지
+            let multiplier = dt / 16.66; // 60fps 기준 보정값
+            
+            updatePhysics(multiplier, timestamp);
+            render();
+            
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function startCountdown() {
+            const countdownEl = document.getElementById('countdown');
+            countdownEl.style.display = 'block';
+            let count = 3;
+            
+            countdownEl.innerText = count;
+            countdownEl.style.color = '#ffffff';
+            countdownEl.style.animation = 'pop 1s ease-in-out';
+            
+            let interval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownEl.innerText = count;
+                    countdownEl.style.animation = 'none';
+                    void countdownEl.offsetWidth; // 애니메이션 강제 리셋 (Reflow)
+                    countdownEl.style.animation = 'pop 1s ease-in-out';
+                } else if (count === 0) {
+                    countdownEl.innerText = 'GO!';
+                    countdownEl.style.color = '#facc15';
+                    countdownEl.style.animation = 'none';
+                    void countdownEl.offsetWidth;
+                    countdownEl.style.animation = 'pop 1s ease-in-out';
+                } else {
+                    clearInterval(interval);
+                    countdownEl.style.display = 'none';
+                    isRacing = true; // 실제 레이싱 시작
+                }
+            }, 1000);
+            
+            lastTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startRace() {
+            const input = document.getElementById('participants').value;
+            const names = input.split(',').map(n => n.trim()).filter(n => n);
+            
+            if (names.length < 2) return alert("치열한 레이스를 위해 최소 2명(개) 이상 입력해주세요!");
+            if (names.length > 15) return alert("화면이 너무 좁아집니다! 최대 15명까지만 권장합니다.");
+
+            // 게임 변수 초기화
+            racers = names.map((name, i) => new Racer(name, i, names.length, colors[i % colors.length], emojis[i % emojis.length]));
+            particles = []; cameraX = -100; flashAlpha = 0; screenShake = 0; winner = null; 
+            isRacing = false;
+            isGameRunning = true;
+            document.getElementById('toast-container').innerHTML = '';
+
+            // UI 전환 (블러 페이드 아웃)
+            const uiLayer = document.getElementById('ui-layer');
+            uiLayer.style.opacity = '0';
+            setTimeout(() => {
+                uiLayer.style.display = 'none';
+                document.getElementById('leaderboard').style.display = 'block';
+                startCountdown();
+            }, 500);
+        }
+
+        function endRace(winRacer) {
+            document.getElementById('leaderboard').style.display = 'none';
+            
+            const uiLayer = document.getElementById('ui-layer');
+            document.getElementById('start-panel').style.display = 'none';
+            const winnerPanel = document.getElementById('winner-panel');
+            
+            document.getElementById('winner-name').innerText = winRacer.name;
+            document.getElementById('winner-name').style.color = winRacer.color;
+            
+            winnerPanel.style.display = 'block';
+            uiLayer.style.display = 'flex';
+            
+            // 결과창 부드러운 등장 연출
+            setTimeout(() => uiLayer.style.opacity = '1', 50);
+
+            // 1등 전용 화려한 팡파레 이펙트 (좌우 교차 발사)
+            let end = Date.now() + 3500;
+            (function frame() {
+                confetti({ particleCount: 6, angle: 60, spread: 55, origin: { x: 0 }, colors: ['#3b82f6', '#8b5cf6', '#ffffff'] });
+                confetti({ particleCount: 6, angle: 120, spread: 55, origin: { x: 1 }, colors: ['#f87171', '#facc15', '#ffffff'] });
+                if (Date.now() < end) requestAnimationFrame(frame);
+            }());
+        }
+
+        function resetGame() {
+            isGameRunning = false;
+            if (animationId) cancelAnimationFrame(animationId);
+            
+            document.getElementById('winner-panel').style.display = 'none';
+            document.getElementById('start-panel').style.display = 'block';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    </script>
 </body>
 </html>
